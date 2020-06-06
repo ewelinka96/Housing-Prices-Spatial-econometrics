@@ -1,1 +1,1 @@
-# Hosuing-Prices-Spatial-econometrics
+# Hosuing Prices - Spatial econometrics
