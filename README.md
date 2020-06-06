@@ -1,1 +1,1 @@
-# Hosuing Prices - Spatial econometrics
+# Housing Prices - Spatial econometrics
