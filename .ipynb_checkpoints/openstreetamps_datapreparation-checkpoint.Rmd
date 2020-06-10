@@ -1,0 +1,450 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.1.1
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import pandas as pd
+import ast
+import requests
+import time
+```
+
+## Reading saved data to python format
+
+```{python}
+list_of_results = []
+```
+
+```{python}
+with open("results.txt", "r", encoding='utf-8') as file:
+    for data in file.readlines():
+        list_of_results.append(ast.literal_eval(data))
+```
+
+```{python}
+list_of_results
+```
+
+### Getting all possible parameters of properties
+
+```{python}
+list_of_results_2 = [data[3] for data in list_of_results]
+all_params = set([x[0] for y in list_of_results_2 for x in y])
+```
+
+### Creating final dictionary to pass it to pandas dataframe
+
+```{python}
+final_dict = {}
+final_dict["location"] = []
+final_dict["total_price"] = []
+final_dict["initial_date"] = []
+final_dict["update_date"] = []
+final_dict["link"] =[]
+for param in all_params:
+    final_dict[param] = []
+```
+
+```{python}
+for result in list_of_results:
+    
+    ## Getting location
+    location = result[0]
+    
+    ## Getting total_price
+    total_price = result[1]
+    
+    ## Getting dates
+    initial_date = result[2][0]
+    update_date = result[2][1]
+    
+    ## Getting link
+    link = result[4]
+    
+    ## Saving above to dictionary 
+    final_dict["location"].append(location)
+    final_dict["total_price"].append(total_price)
+    final_dict["initial_date"].append(initial_date)
+    final_dict["update_date"].append(update_date)
+    final_dict["link"].append(link)
+    
+    
+    ## Getting params
+    available_parameters = dict(result[3].copy())
+    
+    for param in all_params:
+        
+        if param in available_parameters.keys():
+            final_dict[param].append(available_parameters[param])
+        
+        else:
+            final_dict[param].append(None)
+            
+            
+    
+    
+```
+
+```{python}
+df = pd.DataFrame(final_dict)
+```
+
+## Adjusting dataframe
+
+
+#### unpacking location
+
+```{python}
+df_location = df.location.str.split(",", n = 4, expand = True)
+```
+
+```{python}
+df_location.columns = ["City", "District", "Detailed_location", "Additional_info", "Other"]
+```
+
+```{python}
+detailed_loc = df_location.apply(lambda x: x["Detailed_location"] if str(x["Additional_info"]) == "None" else x["Additional_info"], axis = 1)
+```
+
+```{python}
+df_location["Detailed_location_full"] = detailed_loc
+```
+
+### total_price
+
+```{python}
+def extract_price(text):
+    
+    text = text.replace("zł", "")
+    text = text.replace(" ", "")
+    text = text.replace(",", ".")
+    
+    try:
+        final_price = float(text)
+    except:
+        final_price = None
+    
+    return final_price
+```
+
+```{python}
+df["total_price"] = df.total_price.apply(lambda text: extract_price(text))
+    
+```
+
+### Dealing with dates
+
+```{python}
+df.loc[df["initial_date"].str.contains("minut|godzin|dzień|dni|mies|rok|lat")]
+```
+
+#### Możliwe warunki 
+Czas liczony w dniach
+
+* Minut i godzin -> Przekonwertowane na less than a day
+* Dzień -> 1
+* Dni (liczba - d) -> 1 * d
+* Miesięcy (liczba - m) -> m * 30
+* rok/lat (liczba - y) -> y * 365
+
+
+
+```{python}
+import re
+```
+
+```{python}
+def date_extractor(x):
+    
+    
+    x = x.replace("około ", "")
+    x = x.replace("prawie ", "")
+    x = x.replace("ponad ", "")
+    
+    if len(re.findall("minut|godzin", x)) > 0:
+        return "Less than a day"
+    
+    elif "dzień" in x:
+        return 1
+    
+    elif "dni " in x:
+        x = x.replace("Data dodania: ", "")
+        x = x.replace(" dni temu", "")
+        
+        return int(x)
+    
+    elif "miesiąc " in x:
+        
+        return 30
+    
+    elif any(m in x for m in ["miesiące", "miesięcy"]) == True:
+        
+        
+        x = x.replace("Data dodania: ", "")
+        x = x.replace(" miesiące temu", "")
+        x = x.replace(" miesięcy temu", "")
+        x = 30 * int(x)
+        return x
+    
+    elif "rok" in x:
+        return 365
+    
+    
+     
+    
+    else:
+        
+#         x = x.replace("około ", "")
+#         x = x.replace("ponad ", "")
+        x = x.replace("Data dodania: ", "")
+        x = x.replace(" lata temu", "")
+        x = x.replace(" lat temu", "")
+        
+        x = 365 * int(x)
+        
+        return x
+        
+```
+
+```{python}
+days_from_initial_announcement = df.initial_date.apply(lambda x: date_extractor(x))
+```
+
+### Dealing with powierzchnia
+
+```{python}
+df["Powierzchnia"] = df["Powierzchnia"].apply(lambda x: float(x.split(" ")[0].replace(",", ".")))
+```
+
+### Dealing with czynsz
+
+```{python}
+df["Czynsz"] = df["Czynsz"].apply(lambda x: float(x.replace(" zł", "").replace(" ", "").replace(",", ".")) if str(x) != 'None' else None)
+```
+
+### Final df
+
+```{python}
+df_final = df_location.iloc[:,[1,5,4]].copy()
+```
+
+```{python}
+df_final["Total_price"] = df.loc[:,"total_price"]
+```
+
+```{python}
+df_final["Dates_from_initial_announcement"] = days_from_initial_announcement
+```
+
+```{python}
+df_final = pd.concat([df_final, df.iloc[:,5:]], axis = 1)
+```
+
+```{python}
+df_final = df_final.loc[df_final["Other"].isna() == True]
+```
+
+```{python}
+df_final = df_final.loc[df_final["Total_price"].isna() == False]
+```
+
+```{python}
+df_final.drop(columns = ["Other"], inplace = True)
+```
+
+```{python}
+df_final.reset_index(drop = True, inplace = True)
+```
+
+## Getting distance from city center (Pałac kultury i nauki)
+
+
+#### First let's get coordinates of each location
+
+```{python}
+headers = {
+    "User-Agent": "MFHUSTLA420",
+    "email": "grego23@onet.eu"
+}
+def get_coordinates(suburb, street, headers = headers):
+
+    if street is not None:
+        request = "https://nominatim.openstreetmap.org/search?suburb={}&street={}&city=Warsaw&country=pl&format=json&polygon=1&addressdetails=1&limit=1".format(suburb, street)
+        
+    else:
+        request = "https://nominatim.openstreetmap.org/search?suburb={}&city=Warsaw&country=pl&format=json&polygon=1&addressdetails=1&limit=1".format(suburb)
+    
+    data = requests.get(request, headers = headers)
+    data = data.json()
+    
+    data = data[0]
+    
+    lat, lon = (data["lat"], data["lon"])
+    time.sleep(1.5)
+    
+    return((lat, lon))
+    
+```
+
+```{python}
+list_of_coordinates = []
+for i in range(0, len(df_final)):
+    
+    if i % 50 == 0:
+        print(i)
+    
+    try:
+        suburb = df_final.loc[i, "District"]
+        street = df_final.loc[i, "Detailed_location_full"]
+        lat, lon = get_coordinates(suburb, street)
+        
+    except:
+        lat = None
+        lon = None
+    
+    output = (i, lat, lon)
+    
+    list_of_coordinates.append(output)
+    
+    with open("coordinates.txt", "a", encoding = 'utf-8') as file:
+        file.write(str(output))
+```
+
+```{python}
+df_final = pd.concat([df_final, pd.DataFrame(list_of_coordinates, columns = ["ID", "Lat", "Lon"]).iloc[:,1:]], axis = 1)
+```
+
+```{python}
+df_final = df_final.loc[df_final["Lat"].isna() == False]
+df_final.reset_index(inplace = True, drop = True)
+```
+
+```{python}
+pkin = get_coordinates("Śródmieście", "plac Defilad 1")
+```
+
+### Now let's get distance
+
+```{python}
+def get_distance(lat, lon, headers = headers):
+    
+    ## We need to pass longitute and latituted of the location, second coordinates are constant for PKiN
+    ## '52.2317641', '21.005799675616117'
+    
+    ## Generally we check the driving time
+    request = 'http://router.project-osrm.org/route/v1/driving/{},{};21.005799675616117,52.2317641'.format(lon, lat)
+    data = requests.get(request)
+    data = data.json()
+    
+    ## Distance is in meters so we convert it to kms
+    distance = data['routes'][0]['legs'][0]['distance']/1000
+    
+     ## Duration is in seconds, so convert to minutes
+    time = data['routes'][0]['legs'][0]['duration']/60
+    
+    return ((distance, time))
+```
+
+```{python}
+test = get_distance(lat_test, lon_test)
+```
+
+```{python}
+import time as tm
+```
+
+```{python}
+list_of_distances = []
+control = []
+for i in range(0, len(df_final)):
+    
+    if i % 50 == 0:
+        print(i)
+    
+    if df_final.loc[i, "Detailed_location_full"] is not None:
+    
+        lat = df_final.loc[i, "Lat"]
+        lon = df_final.loc[i, "Lon"]
+
+        try:
+            distance, time = get_distance(lat, lon)
+            control = []
+        except:
+            distance, time = (None, None)
+            control.append("err")
+    
+    else:
+        distance, time = (None, None)
+        
+    
+    output = (i, distance, time)
+    
+    list_of_distances.append(output)
+    
+    with open("distances.txt", "a", encoding = 'utf-8') as file:
+        file.write(str(output))
+        
+    tm.sleep(1)
+    
+    if len(control) == 20:
+        print("too many empties")
+        break 
+```
+
+```{python}
+df_final = pd.concat([df_final, pd.DataFrame(list_of_distances, columns = ["ID", "Distance_to_PKIN_in_km", "Time_to_PKIN_in_minutes"]).iloc[:,1:]], axis =1)
+```
+
+### Kiedy są same dzielnice podane, to wtedy nie ma odległości i czasu. Więc zinputuję średnim czasem i odległością  
+
+```{python}
+df_final
+```
+
+```{python}
+df_final["Distance_to_PKIN_in_km"] = df_final.groupby('District')['Distance_to_PKIN_in_km'].apply(lambda x:x.fillna(x.mean()))
+```
+
+```{python}
+df_final["Time_to_PKIN_in_minutes"] = df_final.groupby('District')['Time_to_PKIN_in_minutes'].apply(lambda x:x.fillna(x.mean()))
+```
+
+```{python}
+df_final = df_final.loc[df_final["Distance_to_PKIN_in_km"].isna() == False]
+```
+
+```{python}
+df_final.reset_index(inplace = True, drop = True)
+```
+
+### Creating final version of dataframe
+
+```{python}
+df_to_save = df_final.copy()
+```
+
+```{python}
+df_to_save.drop(columns = ["Detailed_location_full", "Dostępne od", "Okna", "Materiał budynku"], inplace = True)
+```
+
+```{python}
+df_to_save.rename(columns = {"Dates_from_initial_announcement": "Days_from_initial_announcement"}, inplace = True)
+```
+
+```{python}
+df_to_save.to_excel("df_final.xlsx", index = False)
+```
+
+```{python}
+
+```

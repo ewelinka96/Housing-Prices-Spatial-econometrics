@@ -1,0 +1,54 @@
+---
+title: "Spatial Econometrics"
+author: "Grzegorz Krochmal and Ewelina Osowska"
+date: ""
+output:
+  html_document:
+    toc: true
+---
+<style>
+body {
+text-align: justify}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r set-options, echo=FALSE, cache=FALSE}
+options(width = 120)
+```
+
+### Introduction
+
+The following analysis ... 
+
+### Dataset 
+<!-- opis zmiennych, jakieś statystyki może podstawowe, jakie wypełnienie missingów -->
+https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula/23095329#23095329
+
+The dataset used in the analysis is created based on ...
+
+```{r}
+df_final <- readxl::read_excel("df_final.xlsx")
+```
+
+### Initial analysis
+<!-- mapka ze średnimi cenami vs dzielnica, średni czynsz vs dzielnica - z pythona, Grzesiek chciał zrobić -->
+
+
+
+### Empirical analysis
+
+In order to estimate housing prices, we run several models and then compare them with respect to prediction power. There are two types of models which we consider: regular OLS regression and spatial models. 
+
+#### OLS regression
+
+
+#### Modele przestrzenne
+<!--macierz wag, test I Morana, jakość modeli: AIC, BIC, LogLik-->
+
+#### Non-parametric model
+
+
+

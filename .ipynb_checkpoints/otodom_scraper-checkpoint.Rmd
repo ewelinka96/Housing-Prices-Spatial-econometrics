@@ -1,0 +1,110 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.1.1
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import time
+import ast
+from lxml import html
+import requests
+```
+
+```{python}
+## Getting names of properties
+
+all_links_of_properties = []
+
+for page_number in range(1, 500):
+    print(page_number)
+    
+    link = "https://www.otodom.pl/sprzedaz/mieszkanie/warszawa/?page={}".format(page_number)
+    page = requests.get(link)
+    tree = html.fromstring(page.content)
+    
+    property_links = tree.xpath('//h3//a[contains(@href,"otodom")]')
+    property_links = [link.attrib['href'] for link in property_links]
+    
+    all_links_of_properties.append(property_links.copy())
+    time.sleep(2)
+    
+with open("links.txt", "a", encoding = "utf-8") as file:
+    file.write(str(all_links_of_properties))
+
+```
+
+```{python}
+final_links = [x for y in all_links_of_properties for x in y]
+```
+
+```{python}
+final_links = list(set(final_links))
+```
+
+```{python}
+## Defining scraper for obtaining info from the announcement
+
+def xml_parser(link):
+    global all_res
+    page = requests.get(link)
+    tree = html.fromstring(page.content)
+    
+    location = tree.xpath('//a[contains(@href, "#map")]/text()')
+    location = location[0]
+    
+    ## Getting total price
+    total_price = tree.xpath("//div[@class='css-1vr19r7']/text()")
+    total_price = total_price[0]
+    
+    ## Getting property info 
+    property_info = tree.xpath("//div[@class='css-1ci0qpi']//li")
+    property_info = [info.text_content() for info in property_info]
+    property_info = [info.split(": ") for info in property_info]
+
+
+    ## Getting date of an offer
+    date_info = tree.xpath("//div[@class='css-lh1bxu']/text()")
+    results = (location, total_price, date_info, property_info, link)
+    
+    with open("results.txt", "a", encoding = "utf-8") as file:
+        file.write(str(results))
+        file.write("\n")
+    
+    
+    
+    time.sleep(3)
+```
+
+```{python}
+control = []
+for num, link in enumerate(final_links):
+    
+    if num % 50 == 0:
+        print (num)
+    
+    try:
+        xml_parser(link)
+        control = []
+    except:
+        control.append(num)
+        pass
+    
+    
+    if len(control) == 20:
+        print(num, "too many errors in a row")
+        break
+    
+```
+
+```{python}
+
+```
