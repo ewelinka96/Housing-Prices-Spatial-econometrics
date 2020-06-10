@@ -24,14 +24,146 @@ options(width = 120)
 The following analysis ... 
 
 ### Dataset 
-<!-- opis zmiennych, jakieś statystyki może podstawowe, jakie wypełnienie missingów -->
-https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula/23095329#23095329
+<!--opisać na podstawie jakich danych zostały wzięte poszczególne kategorie danych-->
+The dataset used in the analysis is created by the authors based on several sources. There are three general groups of variables including property characteristics, spatial characteristics and district characteristics. Property characteristics were obtained from Otodom.pl website with the use of scraper.... 
 
-The dataset used in the analysis is created based on ...
+Below table presents all the variables with its descriptions.
+
+```{r warning=FALSE, message=FALSE}
+df_final <- readxl::read_excel("df_final_v3.xlsx")
+df_final$...1 <- NULL
+```
 
 ```{r}
-df_final <- readxl::read_excel("df_final.xlsx")
+variables <- matrix(c(
+  "District", "The district",
+  "Total price", "Total price of the property in PLN",
+  "Days from initial announcement", "Days from initial announcement",
+  "Czynsz", "Rent",
+  "Forma własności", "Form of ownership",
+  "Piętro", "Floor",
+  "Rodzaj zabudowy", "Type of construction",
+  "Stan wykończenia", "Finishing condition",
+  "Liczba pięter", "Number of floors in the building",
+  "Rynek", "Property market",
+  "Powierzchnia", "Area of the property in squared metres",
+  "Liczba pokoi", "Number of rooms",
+  "Rok budowy", "Year built ",
+  "Ogrzewanie","Heating type",
+  "Lat","Latitude of the property",
+  "Lon","Longitude of the property",
+  "Distance_to_PKIN_in_km","Distance to the center (indicated by the PKiN building) in km",
+  "Time_to_PKIN_in_minutes","Time to the center (indicated by the PKiN building) in minutes", # stopami czy jak?
+  "Distance_to_subway_in_km","Distance to the nearest subway in km",
+  "Price_per_sqm","Price per square metre",
+  "Population_density","Population density", # of what?
+  "Vistula_side(1_for_west_0_for_east)","Which side of the Vistula the property is located (1=West, 0=East)",
+  "Life_quality","Life quality within a district",
+  "Family_friendliness","Family friendliness within a district",
+  "Single_people_friendliness","Single people friendliness within a district",
+  "Senior_people_friendliness","Senior people friendliness within a district"
+  ), 
+  ncol=2,byrow=TRUE)
+colnames(variables) <- c("Variable Name", "Variable description")
+library(knitr)
+kable(variables)
 ```
+
+
+### Data preparation
+
+
+```{r}
+nums <- sapply(df_final, is.numeric)
+df_final_nums <- df_final[,nums]
+head(df_final_nums)
+```
+
+```{r}
+oth <- which(!nums)
+df_final_oth <- df_final[,oth]
+head(df_final_oth)
+```
+
+```{r}
+colnames(df_final_oth)
+```
+
+```{r}
+# pętla nie działa wg mnie przez dwuczłonowe nazwy zmiennych, można je zmienić to będzie i pętla
+df_final$District <- as.factor(df_final$District)
+df_final$Days_from_initial_announcement <- as.factor(df_final$Days_from_initial_announcement)
+df_final$`Forma własności` <- as.factor(df_final$`Forma własności`)
+df_final$Piętro <- as.factor(df_final$Piętro)
+df_final$`Rodzaj zabudowy` <- as.factor(df_final$`Rodzaj zabudowy`)
+df_final$`Stan wykończenia` <- as.factor(df_final$`Stan wykończenia`)
+df_final$Rynek <- as.factor(df_final$Rynek)
+df_final$`Liczba pokoi` <- as.factor(df_final$`Liczba pokoi`)
+df_final$Ogrzewanie <- as.factor(df_final$Ogrzewanie)
+```
+
+```{r}
+#Możemy narysować sobie mapkę dzielnic po prostu, żeby mieć jedną mapkę w R; jeśli decyzja na tak to dopracuje mapke
+#library(rgdal)
+#my_spdf <- readOGR( 
+#  dsn="shapefile/dzielnice_Warszawy.shp", 
+#  layer="dzielnice_Warszawy",
+#  verbose=FALSE
+#)
+```
+
+```{r}
+#library(ggplot2)
+#ggplot() +
+#  geom_polygon(data = my_spdf, aes(x = long, y = lat, group = group))
+```
+
+```{r}
+levels(df_final$District)
+```
+
+```{r}
+levels(df_final$Days_from_initial_announcement)
+```
+less than a day
+a week
+a month
+a quarter
+over a year
+
+
+
+```{r}
+levels(df_final$`Forma własności`)
+```
+
+```{r}
+# 10 first rows
+df_final$Days_from_initial_announcement[1:10]
+```
+
+```{r}
+sapply(df_final, function(x) sum(is.na(x))/dim(df_final)[1]*100) 
+colMeans(is.na(df_final))
+```
+**Rent**
+- regression 
+https://www.researchgate.net/publication/5142421_Determinants_of_Market_Rent
+```{r}
+lm(Czynsz ~ District + Total_price + Powierzchnia + Price_per_sqm + `Liczba pokoi` + Distance_to_PKIN_in_km + Distance_to_subway_in_km, data = df_final)
+```
+
+**Heating**
+- exclusion
+
+**Year built**
+- exclusion
+
+**Building type**
+
+**Finishing condition**
+
+**Form of ownership**
 
 ### Initial analysis
 <!-- mapka ze średnimi cenami vs dzielnica, średni czynsz vs dzielnica - z pythona, Grzesiek chciał zrobić -->
@@ -40,15 +172,15 @@ df_final <- readxl::read_excel("df_final.xlsx")
 
 ### Empirical analysis
 
-In order to estimate housing prices, we run several models and then compare them with respect to prediction power. There are two types of models which we consider: regular OLS regression and spatial models. 
+In order to estimate housing prices, we run several models and then compare them with respect to prediction power. There are three types of models which we consider: regular OLS regression, spatial algorithms and non-parametric algorithms. 
 
 #### OLS regression
 
 
-#### Modele przestrzenne
+#### Spatial models
 <!--macierz wag, test I Morana, jakość modeli: AIC, BIC, LogLik-->
 
-#### Non-parametric model
+#### Non-parametric models
 
 
 
