@@ -72,13 +72,15 @@ kable(variables)
 
 ### Data preparation
 
+This section serves a purpose ...
+
+**Variables formatting and feature engineering**
 
 ```{r}
 nums <- sapply(df_final, is.numeric)
 df_final_nums <- df_final[,nums]
 head(df_final_nums)
 ```
-
 ```{r}
 oth <- which(!nums)
 df_final_oth <- df_final[,oth]
@@ -86,84 +88,124 @@ head(df_final_oth)
 ```
 
 ```{r}
-colnames(df_final_oth)
-```
-
-```{r}
-# pętla nie działa wg mnie przez dwuczłonowe nazwy zmiennych, można je zmienić to będzie i pętla
+df_final$`Vistula_side(1_for_west_0_for_east)` <- as.factor(df_final$`Vistula_side(1_for_west_0_for_east)`)
 df_final$District <- as.factor(df_final$District)
-df_final$Days_from_initial_announcement <- as.factor(df_final$Days_from_initial_announcement)
 df_final$`Forma własności` <- as.factor(df_final$`Forma własności`)
-df_final$Piętro <- as.factor(df_final$Piętro)
 df_final$`Rodzaj zabudowy` <- as.factor(df_final$`Rodzaj zabudowy`)
 df_final$`Stan wykończenia` <- as.factor(df_final$`Stan wykończenia`)
 df_final$Rynek <- as.factor(df_final$Rynek)
-df_final$`Liczba pokoi` <- as.factor(df_final$`Liczba pokoi`)
 df_final$Ogrzewanie <- as.factor(df_final$Ogrzewanie)
 ```
 
 ```{r}
-#Możemy narysować sobie mapkę dzielnic po prostu, żeby mieć jedną mapkę w R; jeśli decyzja na tak to dopracuje mapke
-#library(rgdal)
-#my_spdf <- readOGR( 
-#  dsn="shapefile/dzielnice_Warszawy.shp", 
-#  layer="dzielnice_Warszawy",
-#  verbose=FALSE
-#)
+library(ggplot2)
+ggplot(df_final, aes(x = `Liczba pięter`, y = Price_per_sqm)) + 
+  geom_point() +
+  theme_minimal()
 ```
 
 ```{r}
-#library(ggplot2)
-#ggplot() +
-#  geom_polygon(data = my_spdf, aes(x = long, y = lat, group = group))
+df_final$liczba_pieter_binned <- 
+  ifelse(df_final$`Liczba pięter` < 2, "<= 2", 
+       ifelse(df_final$`Liczba pięter` > 2 & df_final$`Liczba pięter` <= 4, "> 2 & <= 4",
+              ifelse(df_final$`Liczba pięter` > 4 & df_final$`Liczba pięter` <= 28, "> 4 & <= 28", 
+                     ifelse(df_final$`Liczba pięter` > 28, "> 28", 0))))
+
+df_final$liczba_pieter_binned <- as.factor(df_final$liczba_pieter_binned)
 ```
 
 ```{r}
-levels(df_final$District)
+# difference in years from the year built
+# Rok budowy - zmienna jako wiek budynku
+df_final$`Rok budowy` <- ifelse(df_final$`Rok budowy`==19885, 1985, df_final$`Rok budowy`)
+df_final$`Rok budowy` <- ifelse(df_final$`Rok budowy`==20112, 2012, df_final$`Rok budowy`)
+df_final$`Rok budowy` <- ifelse(df_final$`Rok budowy`==20110, 2010, df_final$`Rok budowy`)
+
+df_final$building_age <- 2020 - df_final$`Rok budowy`
 ```
 
 ```{r}
-levels(df_final$Days_from_initial_announcement)
-```
-less than a day
-a week
-a month
-a quarter
-over a year
-
-
-
-```{r}
-levels(df_final$`Forma własności`)
+ggplot(df_final, aes(x = building_age, y = Price_per_sqm)) + 
+  geom_point() +
+  theme_minimal()
 ```
 
 ```{r}
-# 10 first rows
-df_final$Days_from_initial_announcement[1:10]
+df_final$building_age_binned <- 
+  ifelse(df_final$building_age <= 0, "<= 0", 
+       ifelse(df_final$building_age > 0 & df_final$building_age <= 12, "> 0 & <= 12",
+              ifelse(df_final$building_age > 12 & df_final$building_age <= 64, "> 12 & <= 64", 
+                     ifelse(df_final$building_age > 64 & df_final$building_age <= 105, "> 64 & <= 105",
+                            ifelse(df_final$building_age > 105, "> 105", 0)))))
+
+df_final$building_age_binned <- as.factor(df_final$building_age_binned)
 ```
 
 ```{r}
-sapply(df_final, function(x) sum(is.na(x))/dim(df_final)[1]*100) 
+df_final$Days_from_initial_announcement <- ifelse(df_final$Days_from_initial_announcement=="Less than a day", 0, df_final$Days_from_initial_announcement)
+df_final$Days_from_initial_announcement <- as.integer(df_final$Days_from_initial_announcement)
+```
+
+```{r}
+ggplot(df_final, aes(x = Days_from_initial_announcement, y = Price_per_sqm)) + 
+  geom_point() +
+  theme_minimal()
+```
+
+```{r}
+df_final$Days_from_initial_announcement_binned <- 
+  ifelse(df_final$Days_from_initial_announcement == 0, "Less than a day", 
+       ifelse(df_final$Days_from_initial_announcement > 0 & df_final$building_age <= 7, "Week or less than a week",
+              ifelse(df_final$building_age > 7 & df_final$building_age <= 30, "Month or less than a month", 
+                     ifelse(df_final$building_age > 30 & df_final$building_age <= 365, "Year or ess than a year",
+                            ifelse(df_final$building_age > 365, "Over a year", 0)))))
+
+df_final$Days_from_initial_announcement_binned <- as.factor(df_final$Days_from_initial_announcement_binned)
+```
+
+```{r}
+df_final$Piętro <- as.factor(df_final$Piętro)
+levels(df_final$Piętro)
+
+df_final$Piętro_binned <- df_final$Piętro
+levels(df_final$Piętro_binned) <- c("> 10","=> 1 & <= 5","> 5 & <= 10","=> 1 & <= 5","=> 1 & <= 5","=> 1 & <= 5","=> 1 & <= 5","> 5 & <= 10","> 5 & <= 10","> 5 & <= 10","> 5 & <= 10","parter","poddasze","suterena")
+levels(df_final$Piętro_binned)
+```
+
+```{r}
+df_final$`Liczba pokoi` <- as.factor(df_final$`Liczba pokoi`)
+levels(df_final$`Liczba pokoi`)
+
+df_final$liczba_pokoi_binned <- df_final$`Liczba pokoi`
+levels(df_final$liczba_pokoi_binned) <- c("1 - 2","3 - 5","3 - 5","3 - 5","3 - 5","6 - 10","6 - 10","6 - 10","6 - 10","> 10")
+levels(df_final$liczba_pokoi_binned)
+```
+
+
+
+**Missing values treatment**
+
+```{r}
 colMeans(is.na(df_final))
+sum(!is.na(df_final$Czynsz))
 ```
-**Rent**
-- regression 
+
+*Rent*
+
 https://www.researchgate.net/publication/5142421_Determinants_of_Market_Rent
+
 ```{r}
-lm(Czynsz ~ District + Total_price + Powierzchnia + Price_per_sqm + `Liczba pokoi` + Distance_to_PKIN_in_km + Distance_to_subway_in_km, data = df_final)
+fit_rent <- lm(Czynsz ~ District + Total_price + Powierzchnia + Price_per_sqm + Distance_to_PKIN_in_km + Distance_to_subway_in_km, data = df_final)
+library(dplyr)
+df3 <- df_final %>% 
+  dplyr::mutate(pred = predict(fit_rent, .)) %>%
+  dplyr::mutate(czynsz_new = ifelse(is.na(Czynsz), pred, Czynsz))
+
+# See the result
+df3 %>% as.data.frame()
 ```
 
-**Heating**
-- exclusion
 
-**Year built**
-- exclusion
-
-**Building type**
-
-**Finishing condition**
-
-**Form of ownership**
 
 ### Initial analysis
 <!-- mapka ze średnimi cenami vs dzielnica, średni czynsz vs dzielnica - z pythona, Grzesiek chciał zrobić -->
