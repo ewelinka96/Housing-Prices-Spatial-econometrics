@@ -6,6 +6,27 @@ output:
   html_document:
     toc: true
 ---
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+packages_vector = c("knitr", "readxl", "kableExtra", "ggplot2", "rpart", "rattle", "mice", "dplyr","forcats")
+
+package.check <- lapply(packages_vector, FUN = function(x) {
+  if (!require(x, character.only = TRUE)) {
+    install.packages(x, dependencies = TRUE)
+  }
+})
+
+library(knitr)
+library(readxl)
+library(kableExtra)
+library(ggplot2)
+library(rpart)
+library(rattle)
+library(mice)
+library(dplyr)
+library(forcats)
+```
+
 <style>
 body {
 text-align: justify}
@@ -20,43 +41,57 @@ options(width = 120)
 ```
 
 ### Introduction
+The main objective of the following analysis is to find dependencies on the real estate market in Warsaw. The influence of particular property characteristics on its valuation will be investigated with the use of property, spatial and district characteristics. OLS regression, spatial algorithms and non-parametric algorithms will be considered and then compared accoring to the prediction power.
 
-The following analysis ... 
+### Dataset
+The dataset used in the analysis is created by the authors based on several sources. There are three general groups of variables including property characteristics, spatial characteristics and district characteristics. 
 
-### Dataset 
-<!--opisać na podstawie jakich danych zostały wzięte poszczególne kategorie danych-->
-The dataset used in the analysis is created by the authors based on several sources. There are three general groups of variables including property characteristics, spatial characteristics and district characteristics. Property characteristics were obtained from Otodom.pl website with the use of scraper.... 
+Property characteristics were obtained from otodom.pl website with the use of web scraping algorithm written in Python. Data sources from otodom.pl website include also the location of the property for sell. 
 
-Below table presents all the variables with its descriptions.
+Spatial data used in the analysis regard distances from particular points obtained with the use of geographical coordinates. Data on coordinates of PKiN was obtained from openstreetmap.org while coordinates of subway stations were obtained from maps.google.pl. 
+
+As to districts characteristics, the data used regard attractiveness of live conditions in particular Warsaw districts. These measures are synthetic which means they were obtained on the basis of multiple factors. We sourced it from the report prepared by the Statistical Office in Warsaw [^gus]. All the codes used for operations described above can be found on https://github.com/GIKroch/Housing-Prices-Spatial-econometrics. 
+
+Below table presents all the variables we analyze with its detailed descriptions.
 
 ```{r warning=FALSE, message=FALSE}
-df_final <- readxl::read_excel("df_final_v3.xlsx")
+df_final <- readxl::read_excel("df_final_v4.xlsx")
 df_final$...1 <- NULL
 ```
 
-```{r}
+```{r }
+colnames(df_final)
+```
+
+```{r echo=FALSE, warning=TRUE, include=FALSE}
+# supplementary code
+colnames(df_final) <- c("District", "Total_price", "Days_from_initial_announcement", "Rent", "Ownership", "Floor", "Construction_type", "Finishing_condition", "No_of_floors", "Property_market", "Area", "No_of_rooms", "Year_built", "Heating", "Lat", "Lon", "Distance_to_PKIN_in_km", "Time_to_PKIN_in_minutes", "Price_per_sqm", "Population_density", "Vistula_side", "Life_quality", "Family_friendliness", "Single_people_friendliness", "Senior_people_friendliness", "Distance_to_subway_in_km", "Distance_to_airport_in_km")
+```
+
+```{r echo=FALSE, warning=TRUE}
 variables <- matrix(c(
   "District", "The district",
-  "Total price", "Total price of the property in PLN",
-  "Days from initial announcement", "Days from initial announcement",
-  "Czynsz", "Rent",
-  "Forma własności", "Form of ownership",
-  "Piętro", "Floor",
-  "Rodzaj zabudowy", "Type of construction",
-  "Stan wykończenia", "Finishing condition",
-  "Liczba pięter", "Number of floors in the building",
-  "Rynek", "Property market",
-  "Powierzchnia", "Area of the property in squared metres",
-  "Liczba pokoi", "Number of rooms",
-  "Rok budowy", "Year built ",
-  "Ogrzewanie","Heating type",
+  "Total_price", "Total price of the property in PLN",
+  "Days_from_initial_announcement", "Days from initial announcement appeared on the website",
+  "Rent", "Rent",
+  "Ownership", "Form of ownership",
+  "Floor", "Floor",
+  "Construction_type", "Type of construction",
+  "Finishing_condition", "Finishing condition",
+  "No_of_floors", "Number of floors in the building",
+  "Property_market", "Property market (if primary or secondary)",
+  "Area", "Living area of the property in squared metres",
+  "No_of_rooms", "Number of rooms",
+  "Year_built", "Construction completion year",
+  "Heating","Heating type",
   "Lat","Latitude of the property",
   "Lon","Longitude of the property",
   "Distance_to_PKIN_in_km","Distance to the center (indicated by the PKiN building) in km",
-  "Time_to_PKIN_in_minutes","Time to the center (indicated by the PKiN building) in minutes", # stopami czy jak?
+  "Time_to_PKIN_in_minutes","Time to the center (indicated by the PKiN building) in minutes", # stopami?
   "Distance_to_subway_in_km","Distance to the nearest subway in km",
+  "Distance_to_airport_in_km", "Distance to Chopin Airport in km",
   "Price_per_sqm","Price per square metre",
-  "Population_density","Population density", # of what?
+  "Population_density","Population density of district", 
   "Vistula_side(1_for_west_0_for_east)","Which side of the Vistula the property is located (1=West, 0=East)",
   "Life_quality","Life quality within a district",
   "Family_friendliness","Family friendliness within a district",
@@ -65,150 +100,211 @@ variables <- matrix(c(
   ), 
   ncol=2,byrow=TRUE)
 colnames(variables) <- c("Variable Name", "Variable description")
-library(knitr)
 kable(variables)
 ```
 
-
 ### Data preparation
 
-This section serves a purpose ...
+This section serves a purpose for raw data preparation and manipulation. There are four main areas that it covers: proper variables formatting, variables categorization and also missing values treatment.
 
 **Variables formatting and feature engineering**
-
+First, the initial formatting of the variables was investigated.    
+   
 ```{r}
 nums <- sapply(df_final, is.numeric)
 df_final_nums <- df_final[,nums]
-head(df_final_nums)
+kable(head(df_final_nums)) %>%
+  kable_styling(bootstrap_options = c("hover", "responsive")) %>%
+  scroll_box(width = "100%", height = "90%")
 ```
+   
 ```{r}
 oth <- which(!nums)
 df_final_oth <- df_final[,oth]
-head(df_final_oth)
+kable(head(df_final_oth)) %>%
+  kable_styling(bootstrap_options = c("hover", "responsive")) %>%
+  scroll_box(width = "100%", height = "90%")
 ```
 
+For variables which are qualitative or binary, we apply factor formatting. 
+
 ```{r}
-df_final$`Vistula_side(1_for_west_0_for_east)` <- as.factor(df_final$`Vistula_side(1_for_west_0_for_east)`)
 df_final$District <- as.factor(df_final$District)
-df_final$`Forma własności` <- as.factor(df_final$`Forma własności`)
-df_final$`Rodzaj zabudowy` <- as.factor(df_final$`Rodzaj zabudowy`)
-df_final$`Stan wykończenia` <- as.factor(df_final$`Stan wykończenia`)
-df_final$Rynek <- as.factor(df_final$Rynek)
-df_final$Ogrzewanie <- as.factor(df_final$Ogrzewanie)
+df_final$Ownership <- as.factor(df_final$Ownership)
+df_final$Construction_type <- as.factor(df_final$Construction_type)
+df_final$Finishing_condition <- as.factor(df_final$Finishing_condition)
+df_final$Property_market <- as.factor(df_final$Property_market)
+df_final$Heating <- as.factor(df_final$Heating)
+df_final$Vistula_side <- as.factor(df_final$Vistula_side)
+```
+
+**Features engineering**
+
+In the next stage, categorization of numerical variables takes place. We decide on the variable cuts mainly based on the relationship with the dependent variable being Price_per_sqm and also based on the splits obtained with the decision tree algorithm. 
+
+*Number of floors*
+
+```{r warning=FALSE}
+ggplot(df_final, aes(x = No_of_floors, y = Price_per_sqm)) + 
+  geom_point(color="#451A54") +
+  theme_minimal()
+```
+
+```{r warning=FALSE, message=FALSE}
+formula <- Price_per_sqm ~ No_of_floors
+tree1 <- rpart(formula, data = df_final, control=rpart.control(minsplit=10, cp=0.002, maxdepth = 3))
+fancyRpartPlot(tree1, palettes = "Spectral")
 ```
 
 ```{r}
-library(ggplot2)
-ggplot(df_final, aes(x = `Liczba pięter`, y = Price_per_sqm)) + 
-  geom_point() +
+df_final$No_of_floors_binned <- 
+  ifelse(df_final$No_of_floors < 2, "<= 2", 
+       ifelse(df_final$No_of_floors > 2 & df_final$No_of_floors <= 4, "> 2 & <= 4",
+              ifelse(df_final$No_of_floors > 4 & df_final$No_of_floors <= 28, "> 4 & <= 28", 
+                     ifelse(df_final$No_of_floors > 28, "> 28", 0))))
+
+df_final$No_of_floors_binned <- as.factor(df_final$No_of_floors_binned)
+```
+
+*Construction completion year*
+When analyzing variable indicating construction completion year, we noticed three outliers which seemed to be caused by mistyping. We also decided to create and use further in the modelling variable indicating age of the building instead of the year it was built.
+
+```{r}
+df_final$Year_built <- ifelse(df_final$Year_built==19885, 1985, df_final$Year_built)
+df_final$Year_built <- ifelse(df_final$Year_built==20112, 2012, df_final$Year_built)
+df_final$Year_built <- ifelse(df_final$Year_built==20110, 2010, df_final$Year_built)
+
+df_final$Building_age <- 2020 - df_final$Year_built
+```
+
+```{r warning=FALSE}
+ggplot(df_final, aes(x = Building_age, y = Price_per_sqm)) + 
+  geom_point(color="#451A54") +
   theme_minimal()
 ```
 
 ```{r}
-df_final$liczba_pieter_binned <- 
-  ifelse(df_final$`Liczba pięter` < 2, "<= 2", 
-       ifelse(df_final$`Liczba pięter` > 2 & df_final$`Liczba pięter` <= 4, "> 2 & <= 4",
-              ifelse(df_final$`Liczba pięter` > 4 & df_final$`Liczba pięter` <= 28, "> 4 & <= 28", 
-                     ifelse(df_final$`Liczba pięter` > 28, "> 28", 0))))
-
-df_final$liczba_pieter_binned <- as.factor(df_final$liczba_pieter_binned)
+formula <- Price_per_sqm ~ Building_age
+tree2 <- rpart(formula, data = df_final, control=rpart.control(minsplit=10, cp=0.002, maxdepth = 3))
+fancyRpartPlot(tree2, palettes = "Spectral")
 ```
 
 ```{r}
-# difference in years from the year built
-# Rok budowy - zmienna jako wiek budynku
-df_final$`Rok budowy` <- ifelse(df_final$`Rok budowy`==19885, 1985, df_final$`Rok budowy`)
-df_final$`Rok budowy` <- ifelse(df_final$`Rok budowy`==20112, 2012, df_final$`Rok budowy`)
-df_final$`Rok budowy` <- ifelse(df_final$`Rok budowy`==20110, 2010, df_final$`Rok budowy`)
+df_final$Building_age_binned <- 
+  ifelse(df_final$Building_age <= 0, "<= 0", 
+       ifelse(df_final$Building_age > 0 & df_final$Building_age <= 12, "> 0 & <= 12",
+              ifelse(df_final$Building_age > 12 & df_final$Building_age <= 64, "> 12 & <= 64", 
+                     ifelse(df_final$Building_age > 64 & df_final$Building_age <= 105, "> 64 & <= 105",
+                            ifelse(df_final$Building_age > 105, "> 105", 0)))))
 
-df_final$building_age <- 2020 - df_final$`Rok budowy`
+df_final$Building_age_binned <- as.factor(df_final$Building_age_binned)
 ```
 
-```{r}
-ggplot(df_final, aes(x = building_age, y = Price_per_sqm)) + 
-  geom_point() +
-  theme_minimal()
-```
-
-```{r}
-df_final$building_age_binned <- 
-  ifelse(df_final$building_age <= 0, "<= 0", 
-       ifelse(df_final$building_age > 0 & df_final$building_age <= 12, "> 0 & <= 12",
-              ifelse(df_final$building_age > 12 & df_final$building_age <= 64, "> 12 & <= 64", 
-                     ifelse(df_final$building_age > 64 & df_final$building_age <= 105, "> 64 & <= 105",
-                            ifelse(df_final$building_age > 105, "> 105", 0)))))
-
-df_final$building_age_binned <- as.factor(df_final$building_age_binned)
-```
+*Days from the initial announcement*
 
 ```{r}
 df_final$Days_from_initial_announcement <- ifelse(df_final$Days_from_initial_announcement=="Less than a day", 0, df_final$Days_from_initial_announcement)
 df_final$Days_from_initial_announcement <- as.integer(df_final$Days_from_initial_announcement)
 ```
 
-```{r}
+```{r warning=FALSE}
 ggplot(df_final, aes(x = Days_from_initial_announcement, y = Price_per_sqm)) + 
-  geom_point() +
+  geom_point(color="#451A54") +
   theme_minimal()
 ```
 
 ```{r}
 df_final$Days_from_initial_announcement_binned <- 
   ifelse(df_final$Days_from_initial_announcement == 0, "Less than a day", 
-       ifelse(df_final$Days_from_initial_announcement > 0 & df_final$building_age <= 7, "Week or less than a week",
-              ifelse(df_final$building_age > 7 & df_final$building_age <= 30, "Month or less than a month", 
-                     ifelse(df_final$building_age > 30 & df_final$building_age <= 365, "Year or ess than a year",
-                            ifelse(df_final$building_age > 365, "Over a year", 0)))))
+       ifelse(df_final$Days_from_initial_announcement > 0 & df_final$Days_from_initial_announcement <= 7, "Week or less than a week",
+              ifelse(df_final$Days_from_initial_announcement > 7 & df_final$Days_from_initial_announcement <= 30, "Month or less than a month", 
+                     ifelse(df_final$Days_from_initial_announcement > 30 & df_final$Days_from_initial_announcement <= 365, "Year or ess than a year",
+                            ifelse(df_final$Days_from_initial_announcement > 365, "Over a year", 0)))))
 
 df_final$Days_from_initial_announcement_binned <- as.factor(df_final$Days_from_initial_announcement_binned)
 ```
 
-```{r}
-df_final$Piętro <- as.factor(df_final$Piętro)
-levels(df_final$Piętro)
+*Floor*
 
-df_final$Piętro_binned <- df_final$Piętro
-levels(df_final$Piętro_binned) <- c("> 10","=> 1 & <= 5","> 5 & <= 10","=> 1 & <= 5","=> 1 & <= 5","=> 1 & <= 5","=> 1 & <= 5","> 5 & <= 10","> 5 & <= 10","> 5 & <= 10","> 5 & <= 10","parter","poddasze","suterena")
-levels(df_final$Piętro_binned)
+```{r}
+df_final$Floor <- as.factor(df_final$Floor)
+levels(df_final$Floor)
+```
+
+```{r warning=FALSE}
+df_final %>% group_by(Floor) %>% count
 ```
 
 ```{r}
-df_final$`Liczba pokoi` <- as.factor(df_final$`Liczba pokoi`)
-levels(df_final$`Liczba pokoi`)
-
-df_final$liczba_pokoi_binned <- df_final$`Liczba pokoi`
-levels(df_final$liczba_pokoi_binned) <- c("1 - 2","3 - 5","3 - 5","3 - 5","3 - 5","6 - 10","6 - 10","6 - 10","6 - 10","> 10")
-levels(df_final$liczba_pokoi_binned)
+df_final$Floor_binned <- df_final$Floor
+levels(df_final$Floor_binned) <- c("> 10","=> 1 & <= 5","> 5 & <= 10","=> 1 & <= 5","=> 1 & <= 5","=> 1 & <= 5","=> 1 & <= 5","> 5 & <= 10","> 5 & <= 10","> 5 & <= 10","> 5 & <= 10","parter","poddasze","suterena")
+levels(df_final$Floor_binned)
 ```
 
+*Number of rooms*
 
+```{r}
+df_final$No_of_rooms <- as.factor(df_final$No_of_rooms)
+levels(df_final$No_of_rooms)
+```
+
+```{r}
+df_final %>% group_by(No_of_rooms) %>% count
+```
+
+```{r}
+df_final$No_of_rooms_binned <- df_final$No_of_rooms
+levels(df_final$No_of_rooms_binned) <- c("1","2","3 or more","3 or more","3 or more","3 or more","3 or more","3 or more","3 or more","3 or more")
+levels(df_final$No_of_rooms_binned)
+```
 
 **Missing values treatment**
 
+This section aims to missing data treatment. Below can be seen the missing values ratio for each variable. 
+
 ```{r}
 colMeans(is.na(df_final))
-sum(!is.na(df_final$Czynsz))
 ```
 
-*Rent*
-
-https://www.researchgate.net/publication/5142421_Determinants_of_Market_Rent
+For qualitative variables like form of ownership, floor, type of construction, finishing condition, heating, number of floors in the building, building age and floor, we decide to make missing values an explicit factor level.
 
 ```{r}
-fit_rent <- lm(Czynsz ~ District + Total_price + Powierzchnia + Price_per_sqm + Distance_to_PKIN_in_km + Distance_to_subway_in_km, data = df_final)
-library(dplyr)
-df3 <- df_final %>% 
-  dplyr::mutate(pred = predict(fit_rent, .)) %>%
-  dplyr::mutate(czynsz_new = ifelse(is.na(Czynsz), pred, Czynsz))
+f_names <- c("Ownership", "Floor", "Construction_type", "Finishing_condition", "Heating", "No_of_floors_binned", "Building_age_binned", "Floor_binned")
 
-# See the result
-df3 %>% as.data.frame()
+df_final[,f_names] <- lapply(df_final[,f_names], function(x) fct_explicit_na(x, na_level = "Missing")) %>% as.data.frame
+``` 
+
+As to qualitative variables, we decided to fill the value of Rent with Predictive according to Mean Matching algorithm. Value of rent for the owned property is a concept typical for Poland and depends on many external factors like type of the entity managing the building, living area, number of people living in the property, type of heating (e.g. if urban then it is contained in the rent, if gas then it is paid separately to the gas plant). We decided to use as a proxy of these factors the living area, number of rooms and also type of heating. 
+
+```{r results='hide'}
+formula <- make.formulas(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")])
+imp <- mice(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")],
+            m=5,
+            method="pmm", 
+            formulas = formula, 
+            seed=1234)
+
+rent_imp <- rowMeans(imp[["imp"]][["Rent"]])
+names(rent_imp) <- NULL
+
+df_final$id <- 1:dim(df_final)[1]
+miss_rent <- df_final %>% filter(is.na(Rent))
+nonmiss_rent <- df_final %>% filter(!is.na(Rent))
+nonmiss_rent$rent_imp <- NA
+
+df_final_1 <- cbind(miss_rent, rent_imp)
+df_final_2 <- rbind(nonmiss_rent, df_final_1)
+
+df_final_2$Rent_imp <- ifelse(is.na(df_final_2$Rent), rent_imp, df_final_2$Rent)
+df_final_2 <- df_final_2 %>% dplyr::select(id, Rent_imp)
+df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-Rent_imp.x, -id) %>% dplyr::rename("Rent_imp" = Rent_imp.y)
+
 ```
 
+### Initial analysis and hypotheses
+<!-- mapka ze średnimi cenami vs dzielnica, średni czynsz vs dzielnica -->
 
 
-### Initial analysis
-<!-- mapka ze średnimi cenami vs dzielnica, średni czynsz vs dzielnica - z pythona, Grzesiek chciał zrobić -->
 
 
 
@@ -225,4 +321,7 @@ In order to estimate housing prices, we run several models and then compare them
 #### Non-parametric models
 
 
+
+
+[^gus]: "Ranking dzielnic Warszawy pod względem atrakcyjności warunków życia", GUS Warszawa, source: https://warszawa.stat.gov.pl/publikacje-i-foldery/warunki-zycia/ranking-dzielnic-warszawy-pod-wzgledem-atrakcyjnosci-warunkow-zycia,1,2.html
 

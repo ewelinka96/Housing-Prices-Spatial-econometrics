@@ -1,7 +1,15 @@
+
+
 setwd("/Users/ewelinka/Desktop/Housing-Prices-Spatial-econometrics")
+library(geosphere)
+library(readxl)
+library(xlsx)
+
 
 df_final <- readxl::read_excel("df_final_v2.xlsx")
 summary(df_final)
+
+# distance to nearest metro
 
 metro <- data.frame(station = c("Kabaty", "Natolin", "Imielin", "Stokłosy", "Ursynów", "Służew", "Wilanowska", 
                                 "Wierzbno", "Racławicka", "Pole_Mokotowskie", "Politechnika", "Centrum", "Świętokrzyska",
@@ -33,11 +41,28 @@ dist_all$Distance_to_subway_in_km <- apply(dist_all, 1, FUN=min)
 df_final <- cbind(df_final, dist_all$Distance_to_subway_in_km)
 colnames(df_final)[26] <- "Distance_to_subway_in_km"
 
-install.packages("xlsx")
-library(xlsx)
 write.xlsx(df_final, file = "df_final_v3.xlsx")
 
 
 
+# distance to airport
+df_final <- readxl::read_excel("df_final_v3.xlsx")
+df_final$...1 <- NULL
 
+chopin_airport <- data.frame(airport = "Chopin_Airport",
+                             lat=52.1672369,
+                             lon=20.9416269)
+
+dist = list()
+for (i in 1:as.numeric(dim(chopin_airport)[1])){
+  test <- distHaversine(df_final[,15:16], chopin_airport[i,2:3])/1000
+  dist[[chopin_airport[i,1]]] <- test
+}
+
+dist_all <- do.call(cbind, dist)
+dist_all <- as.data.frame(dist_all)
+
+df_final <- cbind(df_final, dist_all$Chopin_Airport)
+colnames(df_final)[27] <- "Distance_to_airport_in_km"
+write.xlsx(df_final, file = "df_final_v4.xlsx")
 
