@@ -73,7 +73,6 @@ The data obtained from Otodom.pl, which is one of the largest real-estate platfo
 
 # Literature
 
-
 przeglad literatury
 
 # Data
@@ -180,7 +179,7 @@ In the next stage, categorization of numerical variables takes place. We decide 
 
 ```{r warning=FALSE}
 ggplot(df_final, aes(x = No_of_floors, y = Price_per_sqm)) + 
-  geom_point(color="#451A54") +
+  geom_point(color="#FDE733") +
   theme_minimal()
 ```
 
@@ -213,7 +212,7 @@ df_final$Building_age <- 2020 - df_final$Year_built
 
 ```{r warning=FALSE}
 ggplot(df_final, aes(x = Building_age, y = Price_per_sqm)) + 
-  geom_point(color="#451A54") +
+  geom_point(color="#FDE733") +
   theme_minimal()
 ```
 
@@ -243,7 +242,7 @@ df_final$Days_from_initial_announcement <- as.integer(df_final$Days_from_initial
 
 ```{r warning=FALSE}
 ggplot(df_final, aes(x = Days_from_initial_announcement, y = Price_per_sqm)) + 
-  geom_point(color="#451A54") +
+  geom_point(color="#FDE733") +
   theme_minimal()
 ```
 
@@ -252,7 +251,7 @@ df_final$Days_from_initial_announcement_binned <-
   ifelse(df_final$Days_from_initial_announcement == 0, "Less than a day", 
        ifelse(df_final$Days_from_initial_announcement > 0 & df_final$Days_from_initial_announcement <= 7, "Week or less than a week",
               ifelse(df_final$Days_from_initial_announcement > 7 & df_final$Days_from_initial_announcement <= 30, "Month or less than a month", 
-                     ifelse(df_final$Days_from_initial_announcement > 30 & df_final$Days_from_initial_announcement <= 365, "Year or ess than a year",
+                     ifelse(df_final$Days_from_initial_announcement > 30 & df_final$Days_from_initial_announcement <= 365, "Year or less than a year",
                             ifelse(df_final$Days_from_initial_announcement > 365, "Over a year", 0)))))
 
 df_final$Days_from_initial_announcement_binned <- as.factor(df_final$Days_from_initial_announcement_binned)
@@ -310,7 +309,7 @@ df_final[,f_names] <- lapply(df_final[,f_names], function(x) fct_explicit_na(x, 
 
 As to qualitative variables, we decided to fill the value of Rent with Predictive according to Mean Matching algorithm. Value of rent for the owned property is a concept typical for Poland and depends on many external factors like type of the entity managing the building, living area, number of people living in the property, type of heating (e.g. if urban then it is contained in the rent, if gas then it is paid separately to the gas plant). We decided to use as a proxy of these factors the living area, number of rooms and also type of heating. 
 
-```{r results='hide'}
+```{r results='hide', warning=FALSE, message=FALSE}
 formula <- make.formulas(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")])
 imp <- mice(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")],
             m=5,
@@ -389,30 +388,26 @@ Life quality measures were introduced to capture the determinants of housing-pri
 <center><i><b> Auxiliary Hypothesis Two </b></i></center>
 <center><i> There is a siginficant relation between prices of apartments and life quality measures in specific districts Warsaw</i> </center><br>  
 
-
-
-
-
-
 # Modelling
 
 In order to estimate housing prices, we run several models and then compare them with respect to prediction power. There are three types of models which we consider: regular OLS regression, spatial algorithms and non-parametric algorithms. 
 
 **Hypothesis: Spatial-based variables are significant predictors of housing prices**
 
-```{r}
-colnames(df_final)
-```
+First model we run is linear regression with the use of only spatial characteristics as independent variables. We consider stepwise regression in order to obtain the best model formula according to AIC criterion.
 
 ```{r}
 ols_0 <- lm(Price_per_sqm ~ Distance_to_PKIN_in_km + Distance_to_subway_in_km + Distance_to_airport_in_km,
           data=df_final)
 ```
 
+The adjusted R-squared of the model is 31.44%. The model shows the negative relationship of the price per squared metre with distance to PKiN and distance to subway and positive relationship with distance to airport. The results are intuitive - the prices of properties are indeed higher in the centre and near subway station as it increases the property functionality, while prices of properties near airports are lower due to aircraft noise.
+
 ```{r}
 step.model_0 <- step(ols_0, direction = "both", trace = FALSE)
 summary(step.model_0)
 ```
+The second model we consider uses all possible characteristics including property characteristics, district characteristics and spatial characteristics. 
 
 ```{r}
 ols_1 <- lm(Price_per_sqm ~ 
@@ -422,6 +417,8 @@ ols_1 <- lm(Price_per_sqm ~
             Senior_people_friendliness + Distance_to_PKIN_in_km + Distance_to_subway_in_km + Distance_to_airport_in_km,
           data=df_final)
 ```
+
+With the use of stepwise regression we obtain the final model formula which considers all the passed variables. It is clear that District is a significant factor - districts like Białołęka, Rembertów, Wawer or Wesoła indicate lower property prices than those districts closer to the center like Śródmieście, Ochota, Mokotów or considered as family friendly like Ursynów, Wilanów or Bielany. The model 
 
 ```{r}
 step.model_1 <- step(ols_1, direction = "both", trace = FALSE)
