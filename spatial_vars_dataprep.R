@@ -1,22 +1,37 @@
+# Loading necessary libraries
+packages_vector = c("knitr", "readxl", "kableExtra", "ggplot2", "rpart", "rattle", "mice", "dplyr","forcats")
 
+package.check <- lapply(packages_vector, FUN = function(x) {
+  if (!require(x, character.only = TRUE)) {
+    install.packages(x, dependencies = TRUE)
+  }
+})
 
-setwd("/Users/ewelinka/Desktop/Housing-Prices-Spatial-econometrics")
-library(geosphere)
+library(knitr)
 library(readxl)
+library(kableExtra)
+library(ggplot2)
+library(rpart)
+library(rattle)
+library(mice)
+library(dplyr)
+library(forcats)
+library(geosphere)
 library(xlsx)
 
+setwd("/Users/ewelinka/Desktop/Housing-Prices-Spatial-econometrics")
 
+# Reading data
 df_final <- readxl::read_excel("df_final_v2.xlsx")
 summary(df_final)
 
-# distance to nearest metro
-
+# Distance to the nearest metro
 metro <- data.frame(station = c("Kabaty", "Natolin", "Imielin", "Stokłosy", "Ursynów", "Służew", "Wilanowska", 
                                 "Wierzbno", "Racławicka", "Pole_Mokotowskie", "Politechnika", "Centrum", "Świętokrzyska",
-                                "Ratusz_Arsenał", "Dworzec_Gdański", "Plac_Wilsona", "Marymont", "Słodowiec", "Stare_Bielany", 
-                                "Wawrzyszew", "Młociny", 
-                                "Księcia_Janusza", "Młynów", "Płocka", "Rondo_Daszyńskiego", "Rondo_ONZ", 
-                                "Nowy_Świat", "CNK", "Stadion_Narodowy", "Dworzec_Wileński", "Szwedzka", "Targówek", "Trocka"),
+                                "Ratusz_Arsenał", "Dworzec_Gdański", "Plac_Wilsona", "Marymont", "Słodowiec", 
+                                "Stare_Bielany", "Wawrzyszew", "Młociny", 
+                                "Księcia_Janusza", "Młynów", "Płocka", "Rondo_Daszyńskiego", "Rondo_ONZ","Nowy_Świat", 
+                                "CNK", "Stadion_Narodowy", "Dworzec_Wileński", "Szwedzka", "Targówek", "Trocka"),
                     lat = c(52.1314124, 52.1396902, 52.1500899, 52.1561292, 52.1613618, 52.1733019, 52.1811072,
                             52.1904197,52.1991004,52.2088425,52.2166845,52.216679,52.2352732,52.2448043,52.2575656,
                             52.2688336,52.2717241,52.2759965,52.2801845,52.28323,52.2868791,
@@ -43,9 +58,7 @@ colnames(df_final)[26] <- "Distance_to_subway_in_km"
 
 write.xlsx(df_final, file = "df_final_v3.xlsx")
 
-
-
-# distance to airport
+# Distance to  airport
 df_final <- readxl::read_excel("df_final_v3.xlsx")
 df_final$...1 <- NULL
 
@@ -65,4 +78,5 @@ dist_all <- as.data.frame(dist_all)
 df_final <- cbind(df_final, dist_all$Chopin_Airport)
 colnames(df_final)[27] <- "Distance_to_airport_in_km"
 write.xlsx(df_final, file = "df_final_v4.xlsx")
+
 

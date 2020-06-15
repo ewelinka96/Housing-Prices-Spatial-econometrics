@@ -5,6 +5,7 @@ date: ""
 output:
   html_document:
     toc: true
+    code_folding: hide
 ---
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
@@ -90,10 +91,6 @@ Below table presents all the variables we analyze with its detailed descriptions
 ```{r warning=FALSE, message=FALSE}
 df_final <- readxl::read_excel("df_final_v4.xlsx")
 df_final$...1 <- NULL
-```
-
-```{r }
-colnames(df_final)
 ```
 
 ```{r echo=FALSE, warning=TRUE, include=FALSE}
@@ -310,28 +307,27 @@ df_final[,f_names] <- lapply(df_final[,f_names], function(x) fct_explicit_na(x, 
 As to qualitative variables, we decided to fill the value of Rent with Predictive according to Mean Matching algorithm. Value of rent for the owned property is a concept typical for Poland and depends on many external factors like type of the entity managing the building, living area, number of people living in the property, type of heating (e.g. if urban then it is contained in the rent, if gas then it is paid separately to the gas plant). We decided to use as a proxy of these factors the living area, number of rooms and also type of heating. 
 
 ```{r results='hide'}
-# formula <- make.formulas(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")])
-# imp <- mice(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")],
-#             m=5,
-#             method="pmm", 
-#             formulas = formula, 
-#             seed=1234)
-# 
-# rent_imp <- rowMeans(imp[["imp"]][["Rent"]])
-# names(rent_imp) <- NULL
-# 
-# df_final$id <- 1:dim(df_final)[1]
-# miss_rent <- df_final %>% filter(is.na(Rent))
-# nonmiss_rent <- df_final %>% filter(!is.na(Rent))
-# nonmiss_rent$rent_imp <- NA
-# 
-# df_final_1 <- cbind(miss_rent, rent_imp)
-# df_final_2 <- rbind(nonmiss_rent, df_final_1)
-# 
-# df_final_2$Rent_imp <- ifelse(is.na(df_final_2$Rent), rent_imp, df_final_2$Rent)
-# df_final_2 <- df_final_2 %>% dplyr::select(id, Rent_imp)
-# df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-Rent_imp.x, -id) %>% dplyr::rename("Rent_imp" = Rent_imp.y)
+formula <- make.formulas(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")])
+imp <- mice(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")],
+            m=5,
+            method="pmm",
+            formulas = formula,
+            seed=1234)
 
+rent_imp <- rowMeans(imp[["imp"]][["Rent"]])
+names(rent_imp) <- NULL
+
+df_final$id <- 1:dim(df_final)[1]
+miss_rent <- df_final %>% filter(is.na(Rent))
+nonmiss_rent <- df_final %>% filter(!is.na(Rent))
+nonmiss_rent$rent_imp <- NA
+
+df_final_1 <- cbind(miss_rent, rent_imp)
+df_final_2 <- rbind(nonmiss_rent, df_final_1)
+
+df_final_2$Rent_imp <- ifelse(is.na(df_final_2$Rent), rent_imp, df_final_2$Rent)
+df_final_2 <- df_final_2 %>% dplyr::select(id, Rent_imp)
+df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-id)
 ```
 
 # Exploratory Data Analysis
@@ -345,7 +341,35 @@ As to qualitative variables, we decided to fill the value of Rent with Predictiv
 
 In order to estimate housing prices, we run several models and then compare them with respect to prediction power. There are three types of models which we consider: regular OLS regression, spatial algorithms and non-parametric algorithms. 
 
-## OLS regression
+**Hypothesis: Spatial-based variables are significant predictors of housing prices**
+
+```{r}
+colnames(df_final)
+```
+
+```{r}
+ols_0 <- lm(Price_per_sqm ~ Distance_to_PKIN_in_km + Distance_to_subway_in_km + Distance_to_airport_in_km,
+          data=df_final)
+```
+
+```{r}
+step.model_0 <- step(ols_0, direction = "both", trace = FALSE)
+summary(step.model)
+```
+
+```{r}
+ols_1 <- lm(Price_per_sqm ~ 
+            District + Days_from_initial_announcement_binned + Rent_imp + Ownership + Floor_binned + Construction_type +
+            Finishing_condition + No_of_floors_binned + Property_market + Area + No_of_rooms + Building_age_binned  + 
+            Heating + Population_density + Vistula_side + Life_quality + Family_friendliness + Single_people_friendliness +
+            Senior_people_friendliness + Distance_to_PKIN_in_km + Distance_to_subway_in_km + Distance_to_airport_in_km,
+          data=df_final)
+```
+
+```{r}
+step.model_1 <- step(ols_1, direction = "both", trace = FALSE)
+summary(step.model)
+```
 
 
 ## Spatial models
