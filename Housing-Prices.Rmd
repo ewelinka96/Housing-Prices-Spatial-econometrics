@@ -29,7 +29,17 @@ library(forcats)
 
 <style>
 body {
-text-align: justify}
+text-align: justify; 
+font-size: 18px; 
+line-height: 1.5em; 
+}
+
+p {
+text-indent: 2em
+}
+
+
+
 </style>
 
 ```{r setup, include=FALSE}
@@ -40,11 +50,34 @@ knitr::opts_chunk$set(echo = TRUE)
 options(width = 120)
 ```
 
-### Introduction
-The main objective of the following analysis is to find dependencies on the real estate market in Warsaw. The influence of particular property characteristics on its valuation will be investigated with the use of property, spatial and district characteristics. OLS regression, spatial algorithms and non-parametric algorithms will be considered and then compared accoring to the prediction power.
+# Introduction
+Through the centuries people have invented unlimited variety of techniques and tools to invest money. Real estate market is probably one of the oldest. It guarantees, seemingly, a perfect tradeoff between cash, and something which allows to convert an abstract concept of money into more tangible thing – hectartes of rural plots, houses etc. However, despite the lapse of time and hundreds of years the market exists in different forms, there are no perfect answers what drives the prices of specific types of properties. Sometimes one can get an impression that the attempts to predict the housing prices, which are widely described around different media, are closer to some kind of guessing than any scientific approach. When the coronavirus pandemic in Poland and the lockdown related to it were in peak, one could read the interviews with real-estate experts who were claiming that the prices are not going to go down. For a relatively economic-concious person such statements might be confusing. How can it be that all the markets are most likely to enter a recession and, at the same time, the prices of properties would increase? There is no easy answer to that question. Sometimes, the experts might be wrong on purpose, driven by their own speculative interest. However, what is clear is that there are many determinants of property prices, having their roots in different fields. Starting from the characteristics of properties, going through the situation on financial markets and ending with their influence on investing behavior of people. In this work the first group of features is a subject of analysis. 
 
-### Dataset
-The dataset used in the analysis is created by the authors based on several sources. There are three general groups of variables including property characteristics, spatial characteristics and district characteristics. 
+
+The main objective of this study is to find determinants of prices of apartments in Warsaw. The relation between characteristics of specific property and its value on the online-market is analyzed. 
+The data obtained from Otodom.pl, which is one of the largest real-estate platforms in Poland, is combined with spatial and discrict characteristics. In this analysis multiple machine-learning methods, starting from OLS regression, through spatial-econometrics specific methods and ending with non-parametric models, are utilized. There are two main hypotheses verified in this work. 
+
+<center><i><b> Hypothesis One </b></i></center>
+<center><i> Spatial-based variables are significant predictors of housing-prices </i></center>
+
+<br>
+
+<center><i><b> Hypothesis Two </b></i></center>
+<center><i> The coronavirus pandemic had a negative impact on the housing-prices </i> </center>
+
+
+# Literature
+
+
+przeglad literatury
+
+# Data
+The dataset used in the analysis is created by the authors based on several sources. There are three general groups of variables: 
+
+  * property characteristics 
+  * spatial characteristics 
+  * district characteristics. 
+
 
 Property characteristics were obtained from otodom.pl website with the use of web scraping algorithm written in Python. Data sources from otodom.pl website include also the location of the property for sell. 
 
@@ -103,11 +136,11 @@ colnames(variables) <- c("Variable Name", "Variable description")
 kable(variables)
 ```
 
-### Data preparation
+## Data preparation
 
 This section serves a purpose for raw data preparation and manipulation. There are four main areas that it covers: proper variables formatting, variables categorization and also missing values treatment.
 
-**Variables formatting and feature engineering**
+### Variables formatting and feature engineering
 First, the initial formatting of the variables was investigated.    
    
 ```{r}
@@ -138,11 +171,11 @@ df_final$Heating <- as.factor(df_final$Heating)
 df_final$Vistula_side <- as.factor(df_final$Vistula_side)
 ```
 
-**Features engineering**
+### Features engineering
 
 In the next stage, categorization of numerical variables takes place. We decide on the variable cuts mainly based on the relationship with the dependent variable being Price_per_sqm and also based on the splits obtained with the decision tree algorithm. 
 
-*Number of floors*
+<b> Number of floors </b>
 
 ```{r warning=FALSE}
 ggplot(df_final, aes(x = No_of_floors, y = Price_per_sqm)) + 
@@ -166,7 +199,7 @@ df_final$No_of_floors_binned <-
 df_final$No_of_floors_binned <- as.factor(df_final$No_of_floors_binned)
 ```
 
-*Construction completion year*
+<b> Construction completion year </b>
 When analyzing variable indicating construction completion year, we noticed three outliers which seemed to be caused by mistyping. We also decided to create and use further in the modelling variable indicating age of the building instead of the year it was built.
 
 ```{r}
@@ -258,7 +291,7 @@ levels(df_final$No_of_rooms_binned) <- c("1","2","3 or more","3 or more","3 or m
 levels(df_final$No_of_rooms_binned)
 ```
 
-**Missing values treatment**
+### Treatment of Missing values 
 
 This section aims to missing data treatment. Below can be seen the missing values ratio for each variable. 
 
@@ -277,48 +310,48 @@ df_final[,f_names] <- lapply(df_final[,f_names], function(x) fct_explicit_na(x, 
 As to qualitative variables, we decided to fill the value of Rent with Predictive according to Mean Matching algorithm. Value of rent for the owned property is a concept typical for Poland and depends on many external factors like type of the entity managing the building, living area, number of people living in the property, type of heating (e.g. if urban then it is contained in the rent, if gas then it is paid separately to the gas plant). We decided to use as a proxy of these factors the living area, number of rooms and also type of heating. 
 
 ```{r results='hide'}
-formula <- make.formulas(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")])
-imp <- mice(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")],
-            m=5,
-            method="pmm", 
-            formulas = formula, 
-            seed=1234)
-
-rent_imp <- rowMeans(imp[["imp"]][["Rent"]])
-names(rent_imp) <- NULL
-
-df_final$id <- 1:dim(df_final)[1]
-miss_rent <- df_final %>% filter(is.na(Rent))
-nonmiss_rent <- df_final %>% filter(!is.na(Rent))
-nonmiss_rent$rent_imp <- NA
-
-df_final_1 <- cbind(miss_rent, rent_imp)
-df_final_2 <- rbind(nonmiss_rent, df_final_1)
-
-df_final_2$Rent_imp <- ifelse(is.na(df_final_2$Rent), rent_imp, df_final_2$Rent)
-df_final_2 <- df_final_2 %>% dplyr::select(id, Rent_imp)
-df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-Rent_imp.x, -id) %>% dplyr::rename("Rent_imp" = Rent_imp.y)
+# formula <- make.formulas(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")])
+# imp <- mice(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")],
+#             m=5,
+#             method="pmm", 
+#             formulas = formula, 
+#             seed=1234)
+# 
+# rent_imp <- rowMeans(imp[["imp"]][["Rent"]])
+# names(rent_imp) <- NULL
+# 
+# df_final$id <- 1:dim(df_final)[1]
+# miss_rent <- df_final %>% filter(is.na(Rent))
+# nonmiss_rent <- df_final %>% filter(!is.na(Rent))
+# nonmiss_rent$rent_imp <- NA
+# 
+# df_final_1 <- cbind(miss_rent, rent_imp)
+# df_final_2 <- rbind(nonmiss_rent, df_final_1)
+# 
+# df_final_2$Rent_imp <- ifelse(is.na(df_final_2$Rent), rent_imp, df_final_2$Rent)
+# df_final_2 <- df_final_2 %>% dplyr::select(id, Rent_imp)
+# df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-Rent_imp.x, -id) %>% dplyr::rename("Rent_imp" = Rent_imp.y)
 
 ```
 
-### Initial analysis and hypotheses
+# Exploratory Data Analysis
 <!-- mapka ze średnimi cenami vs dzielnica, średni czynsz vs dzielnica -->
 
 
 
 
 
-### Empirical analysis
+# Modelling
 
 In order to estimate housing prices, we run several models and then compare them with respect to prediction power. There are three types of models which we consider: regular OLS regression, spatial algorithms and non-parametric algorithms. 
 
-#### OLS regression
+## OLS regression
 
 
-#### Spatial models
+## Spatial models
 <!--macierz wag, test I Morana, jakość modeli: AIC, BIC, LogLik-->
 
-#### Non-parametric models
+## Non-parametric models
 
 
 
