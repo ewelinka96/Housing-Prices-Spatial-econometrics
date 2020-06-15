@@ -40,6 +40,10 @@ text-indent: 2em
 }
 
 
+div.figure { 
+
+text-align: center; 
+}
 
 </style>
 
@@ -331,7 +335,60 @@ df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-id)
 ```
 
 # Exploratory Data Analysis
-<!-- mapka ze średnimi cenami vs dzielnica, średni czynsz vs dzielnica -->
+
+After the final data has been obtained. There was a possibility to look at relations between selected variables and the districts of Warsaw. Figure 1 presents mean price per square metre of apartments in specific districts
+
+<b>Figure 1. Mean price per square metre in specific districts of Warsaw</b>
+<br>
+<div class = "figure"> 
+![Figure 1](C:/Users/grzeg/Desktop/studia/Data Science/2 rok/semestr 2/Spatial/Housing-Prices-Spatial-econometrics/graphs/Mean price per square metre in specific districts.PNG)\ 
+</div>
+
+Rembertów, which is an east-border district of Warsaw occured to be the cheapest one place to live in the city in mean values. At the same time, Śródmieście, being the central region, has the highest mean prices, almost 3 times as high as in Rembertów.    
+
+<b>Figure 2. Max price per square metre in specific districts of Warsaw</b>
+<br>
+<div class = "figure"> 
+![Figure 2](C:/Users/grzeg/Desktop/studia/Data Science/2 rok/semestr 2/Spatial/Housing-Prices-Spatial-econometrics/graphs/max price per square metre in specific districts.PNG)\ 
+</div>
+
+The same pattern as in the case of mean prices, can be spotted for max prices. Again, Rembertów is clearly the cheapest one district and Śródmieście is the most expensive. The relation between two extreme districts is even more visible. Max prices in Śródmieście are about 5 times higher than in Rembertów. 
+
+From the analysis of mean and maximum prices a picture of Warsaw apartments market can be drawn. The prices, in general, increase to the central part of the city. Additionaly, the market is quite differentieted. One can also get an impression that the apartments located on the east side of the Vistula river are cheaper. Therefore, <b><i> Auxiliary Hypothesis One </i></b> is proposed. <br>
+
+
+<center><i><b> Auxiliary Hypothesis One </b></i></center>
+<center><i> The prices of the apartments located on the east side of Vistula river are, in general, cheaper </i></center> <br>
+
+
+<b>Figure 3. Mean apartment square metre area in specific districts of Warsaw</b>
+<br>
+<div class = "figure"> 
+![Figure 3](C:/Users/grzeg/Desktop/studia/Data Science/2 rok/semestr 2/Spatial/Housing-Prices-Spatial-econometrics/graphs/mean apartment square metre area in specific districts.PNG)\
+</div>
+
+Mean apartment square area is a variable which delivers an interesting view on a differentation of square metres of apartments in districts. The south districts seem to have higher means of square metres of apartments. 
+
+<b>Figure 4. Median year of construction of the apartments in specific districts of Warsaw</b>
+<br>
+<div class = "figure"> 
+![Figure 4](C:/Users/grzeg/Desktop/studia/Data Science/2 rok/semestr 2/Spatial/Housing-Prices-Spatial-econometrics/graphs/Median year of construction of the apartments in specific districts.PNG)\ 
+</div>
+
+Median year of construction can show how Warsaw evolved in time. The process, without suprise, escalated from the center of city - Śródmieście with apartments older than 50 years (with median threshold) to the borders of Warsaw, but not with the same speed.    
+
+<b>Figure 5. Life quality measures in specific districts of Warsaw</b>
+<br>
+<div class = "figure"> 
+![Figure 5](C:/Users/grzeg/Desktop/studia/Data Science/2 rok/semestr 2/Spatial/Housing-Prices-Spatial-econometrics/graphs/life quality.PNG)\ 
+</div>
+
+Life quality measures were introduced to capture the determinants of housing-prices widely present in the literature. Here, again we can spot the relation, which was identified for prices of square metres of apartments. Rembertów is the worst district in the case of presented measures and Śródmieście is on the top. Based on this observation, <b><i> Auxiliary Hypothesis Two</i></b> is introduced. <br>
+
+
+<center><i><b> Auxiliary Hypothesis Two </b></i></center>
+<center><i> There is a siginficant relation between prices of apartments and life quality measures in specific districts Warsaw</i> </center><br>  
+
 
 
 
@@ -354,7 +411,7 @@ ols_0 <- lm(Price_per_sqm ~ Distance_to_PKIN_in_km + Distance_to_subway_in_km + 
 
 ```{r}
 step.model_0 <- step(ols_0, direction = "both", trace = FALSE)
-summary(step.model)
+summary(step.model_0)
 ```
 
 ```{r}
@@ -368,7 +425,7 @@ ols_1 <- lm(Price_per_sqm ~
 
 ```{r}
 step.model_1 <- step(ols_1, direction = "both", trace = FALSE)
-summary(step.model)
+summary(step.model_1)
 ```
 
 
