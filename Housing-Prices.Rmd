@@ -45,6 +45,12 @@ div.figure {
 text-align: center; 
 }
 
+
+p.noindent {
+
+text-indent: 0 !important;
+}
+
 </style>
 
 ```{r setup, include=FALSE}
@@ -71,11 +77,8 @@ The data obtained from Otodom.pl, which is one of the largest real-estate platfo
 <center><i> The coronavirus pandemic had a negative impact on the housing-prices </i> </center>
 
 
-# Literature
 
-przeglad literatury
-
-# Data
+# 1. Data
 The dataset used in the analysis is created by the authors based on several sources. There are three general groups of variables: 
 
   * property characteristics 
@@ -83,13 +86,16 @@ The dataset used in the analysis is created by the authors based on several sour
   * district characteristics. 
 
 
-Property characteristics were obtained from otodom.pl website with the use of web scraping algorithm written in Python. Data sources from otodom.pl website include also the location of the property for sell. 
+Property characteristics were obtained from otodom.pl website with the use of web scraping algorithm written in Python. All available features of apartments were collected from adverts, amid which address information is the key one from the perspective of this study. 
 
-Spatial data used in the analysis regard distances from particular points obtained with the use of geographical coordinates. Data on coordinates of PKiN was obtained from openstreetmap.org while coordinates of subway stations were obtained from maps.google.pl. 
+Spatial data includes distances from collected apartments to a few, arbitrary selected, points on a map of Warsaw. To measure the distances it was neccessary to employ publicly available APIs
 
-As to districts characteristics, the data used regard attractiveness of live conditions in particular Warsaw districts. These measures are synthetic which means they were obtained on the basis of multiple factors. We sourced it from the report prepared by the Statistical Office in Warsaw [^gus]. All the codes used for operations described above can be found on https://github.com/GIKroch/Housing-Prices-Spatial-econometrics. 
+* Nominatim – Getting coordinates of a specific location, based on its address [^Nominatim]
+* Project-OSRM – Based on coordinates, calculating distances [^Project-OSRM]
 
-Below table presents all the variables we analyze with its detailed descriptions.
+District characteristics, are captured with the measures able to reflect attractiveness of live conditions in particular Warsaw districts. The need to control for such variables was determined by literature overview, which proves that life-quality matters in the case of housing-prices [^D'Acci]. The life-quality measures were assessed from the report prepared by the Statistical Office in Warsaw [^gus]. 
+
+<p class = "noindent"> Below table presents all the variables analyzed with its detailed descriptions. </p>
 
 ```{r warning=FALSE, message=FALSE}
 df_final <- readxl::read_excel("df_final_v4.xlsx")
@@ -136,13 +142,15 @@ colnames(variables) <- c("Variable Name", "Variable description")
 kable(variables)
 ```
 
-## Data preparation
+## 1.1. Data preparation
 
 This section serves a purpose for raw data preparation and manipulation. There are four main areas that it covers: proper variables formatting, variables categorization and also missing values treatment.
 
-### Variables formatting and feature engineering
-First, the initial formatting of the variables was investigated.    
-   
+### 1.1.1. Variables formatting 
+
+<p class = "noindent"> 
+
+* Initial formatting of the variables was investigated.    
 ```{r}
 nums <- sapply(df_final, is.numeric)
 df_final_nums <- df_final[,nums]
@@ -150,7 +158,9 @@ kable(head(df_final_nums)) %>%
   kable_styling(bootstrap_options = c("hover", "responsive")) %>%
   scroll_box(width = "100%", height = "90%")
 ```
-   
+<br>
+
+* For variables which are qualitative or binary, we apply factor formatting.
 ```{r}
 oth <- which(!nums)
 df_final_oth <- df_final[,oth]
@@ -159,7 +169,7 @@ kable(head(df_final_oth)) %>%
   scroll_box(width = "100%", height = "90%")
 ```
 
-For variables which are qualitative or binary, we apply factor formatting. 
+</p>
 
 ```{r}
 df_final$District <- as.factor(df_final$District)
@@ -171,11 +181,11 @@ df_final$Heating <- as.factor(df_final$Heating)
 df_final$Vistula_side <- as.factor(df_final$Vistula_side)
 ```
 
-### Features engineering
+### 1.1.2. Features engineering
 
 In the next stage, categorization of numerical variables takes place. We decide on the variable cuts mainly based on the relationship with the dependent variable being Price_per_sqm and also based on the splits obtained with the decision tree algorithm. 
 
-<b> Number of floors </b>
+<p class = "noindent"> <b> Number of floors </b> </p>
 
 ```{r warning=FALSE}
 ggplot(df_final, aes(x = No_of_floors, y = Price_per_sqm)) + 
@@ -199,8 +209,10 @@ df_final$No_of_floors_binned <-
 df_final$No_of_floors_binned <- as.factor(df_final$No_of_floors_binned)
 ```
 
-<b> Construction completion year </b>
-When analyzing variable indicating construction completion year, we noticed three outliers which seemed to be caused by mistyping. We also decided to create and use further in the modelling variable indicating age of the building instead of the year it was built.
+ 
+<p class = "noindent"> <b> Construction completion year </b> </p>
+
+<p class = "noindent"> When analyzing variable indicating construction completion year, we noticed three outliers which seemed to be caused by mistyping. We also decided to create and use further in the modelling variable indicating age of the building instead of the year it was built. </p>
 
 ```{r}
 df_final$Year_built <- ifelse(df_final$Year_built==19885, 1985, df_final$Year_built)
@@ -233,9 +245,9 @@ df_final$Building_age_binned <-
 df_final$Building_age_binned <- as.factor(df_final$Building_age_binned)
 ```
 
-*Days from the initial announcement*
+<p class = "noindent"> <b> Days from the initial announcement </b> </p>
 
-```{r}
+```{r, results = 'hide'}
 df_final$Days_from_initial_announcement <- ifelse(df_final$Days_from_initial_announcement=="Less than a day", 0, df_final$Days_from_initial_announcement)
 df_final$Days_from_initial_announcement <- as.integer(df_final$Days_from_initial_announcement)
 ```
@@ -246,7 +258,7 @@ ggplot(df_final, aes(x = Days_from_initial_announcement, y = Price_per_sqm)) +
   theme_minimal()
 ```
 
-```{r}
+```{r, results = 'hide'}
 df_final$Days_from_initial_announcement_binned <- 
   ifelse(df_final$Days_from_initial_announcement == 0, "Less than a day", 
        ifelse(df_final$Days_from_initial_announcement > 0 & df_final$Days_from_initial_announcement <= 7, "Week or less than a week",
@@ -257,49 +269,63 @@ df_final$Days_from_initial_announcement_binned <-
 df_final$Days_from_initial_announcement_binned <- as.factor(df_final$Days_from_initial_announcement_binned)
 ```
 
-*Floor*
+<p class = "noindent"> <b> Floor </b> </p>
 
-```{r}
+```{r, results='hide'}
 df_final$Floor <- as.factor(df_final$Floor)
 levels(df_final$Floor)
 ```
 
 ```{r warning=FALSE}
-df_final %>% group_by(Floor) %>% count
+df_final %>% 
+  group_by(Floor) %>% 
+  count %>% 
+  ggplot(aes(x = Floor, y = n)) + 
+  geom_bar(stat = "identity", fill = "orange")
 ```
 
-```{r}
+```{r, results = 'hide'}
 df_final$Floor_binned <- df_final$Floor
 levels(df_final$Floor_binned) <- c("> 10","=> 1 & <= 5","> 5 & <= 10","=> 1 & <= 5","=> 1 & <= 5","=> 1 & <= 5","=> 1 & <= 5","> 5 & <= 10","> 5 & <= 10","> 5 & <= 10","> 5 & <= 10","parter","poddasze","suterena")
 levels(df_final$Floor_binned)
 ```
 
-*Number of rooms*
+<p class = "noindent"> <b> Number of rooms </b></p>
 
-```{r}
+```{r, results = 'hide'}
 df_final$No_of_rooms <- as.factor(df_final$No_of_rooms)
 levels(df_final$No_of_rooms)
 ```
 
 ```{r}
-df_final %>% group_by(No_of_rooms) %>% count
+df_final %>% 
+  group_by(No_of_rooms) %>% 
+  count %>% 
+  ggplot(aes(x = No_of_rooms, y = n)) + 
+  geom_bar(stat='identity', fill = "orange")
 ```
 
-```{r}
+```{r, results = "hide"}
 df_final$No_of_rooms_binned <- df_final$No_of_rooms
 levels(df_final$No_of_rooms_binned) <- c("1","2","3 or more","3 or more","3 or more","3 or more","3 or more","3 or more","3 or more","3 or more")
 levels(df_final$No_of_rooms_binned)
 ```
 
-### Treatment of Missing values 
+### 1.1.3. Treatment of Missing values 
 
-This section aims to missing data treatment. Below can be seen the missing values ratio for each variable. 
+This section addresses missing data treatment. Below variables with missing values are presented along with the missings ratio. 
 
 ```{r}
-colMeans(is.na(df_final))
+
+missings <- as.data.frame(colMeans(is.na(df_final))) 
+missings["Variabe"] <- row.names(missings)
+colnames(missings) <- c("Missings_ratio", "Variable")
+missings %>% filter(Missings_ratio > 0.001) %>% select(Variable, Missings_ratio)
+
+
 ```
 
-For qualitative variables like form of ownership, floor, type of construction, finishing condition, heating, number of floors in the building, building age and floor, we decide to make missing values an explicit factor level.
+<p class = "noindent"> For qualitative variables like form of ownership, floor, type of construction, finishing condition, heating, number of floors in the building, building age and floor, we decide to make missing values an explicit factor level. </p>
 
 ```{r}
 f_names <- c("Ownership", "Floor", "Construction_type", "Finishing_condition", "Heating", "No_of_floors_binned", "Building_age_binned", "Floor_binned")
@@ -307,7 +333,7 @@ f_names <- c("Ownership", "Floor", "Construction_type", "Finishing_condition", "
 df_final[,f_names] <- lapply(df_final[,f_names], function(x) fct_explicit_na(x, na_level = "Missing")) %>% as.data.frame
 ``` 
 
-As to qualitative variables, we decided to fill the value of Rent with Predictive according to Mean Matching algorithm. Value of rent for the owned property is a concept typical for Poland and depends on many external factors like type of the entity managing the building, living area, number of people living in the property, type of heating (e.g. if urban then it is contained in the rent, if gas then it is paid separately to the gas plant). We decided to use as a proxy of these factors the living area, number of rooms and also type of heating. 
+<p class = "noindent"> As to qualitative variables, we decided to fill the value of Rent with Predictive according to Mean Matching algorithm. Value of rent for the owned property is a concept typical for Poland and depends on many external factors like type of the entity managing the building, living area, number of people living in the property, type of heating (e.g. if urban then it is contained in the rent, if gas then it is paid separately to the gas plant). We decided to use as a proxy of these factors the living area, number of rooms and also type of heating. </p>
 
 ```{r results='hide', warning=FALSE, message=FALSE}
 formula <- make.formulas(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")])
@@ -331,16 +357,17 @@ df_final_2 <- rbind(nonmiss_rent, df_final_1)
 df_final_2$Rent_imp <- ifelse(is.na(df_final_2$Rent), rent_imp, df_final_2$Rent)
 df_final_2 <- df_final_2 %>% dplyr::select(id, Rent_imp)
 df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-id)
+
 ```
 
-# Exploratory Data Analysis
+# 2. Exploratory Data Analysis
 
 After the final data has been obtained. There was a possibility to look at relations between selected variables and the districts of Warsaw. Figure 1 presents mean price per square metre of apartments in specific districts
 
 <b>Figure 1. Mean price per square metre in specific districts of Warsaw</b>
 <br>
 <div class = "figure"> 
-![Figure 1](C:/Users/grzeg/Desktop/studia/Data Science/2 rok/semestr 2/Spatial/Housing-Prices-Spatial-econometrics/graphs/Mean price per square metre in specific districts.PNG)\ 
+![Figure 1](graphs/Mean price per square metre in specific districts.PNG)\ 
 </div>
 
 Rembertów, which is an east-border district of Warsaw occured to be the cheapest one place to live in the city in mean values. At the same time, Śródmieście, being the central region, has the highest mean prices, almost 3 times as high as in Rembertów.    
@@ -348,7 +375,7 @@ Rembertów, which is an east-border district of Warsaw occured to be the cheapes
 <b>Figure 2. Max price per square metre in specific districts of Warsaw</b>
 <br>
 <div class = "figure"> 
-![Figure 2](C:/Users/grzeg/Desktop/studia/Data Science/2 rok/semestr 2/Spatial/Housing-Prices-Spatial-econometrics/graphs/max price per square metre in specific districts.PNG)\ 
+![Figure 2](graphs/max price per square metre in specific districts.PNG)\ 
 </div>
 
 The same pattern as in the case of mean prices, can be spotted for max prices. Again, Rembertów is clearly the cheapest one district and Śródmieście is the most expensive. The relation between two extreme districts is even more visible. Max prices in Śródmieście are about 5 times higher than in Rembertów. 
@@ -363,7 +390,7 @@ From the analysis of mean and maximum prices a picture of Warsaw apartments mark
 <b>Figure 3. Mean apartment square metre area in specific districts of Warsaw</b>
 <br>
 <div class = "figure"> 
-![Figure 3](C:/Users/grzeg/Desktop/studia/Data Science/2 rok/semestr 2/Spatial/Housing-Prices-Spatial-econometrics/graphs/mean apartment square metre area in specific districts.PNG)\
+![Figure 3](graphs/mean apartment square metre area in specific districts.PNG)\
 </div>
 
 Mean apartment square area is a variable which delivers an interesting view on a differentation of square metres of apartments in districts. The south districts seem to have higher means of square metres of apartments. 
@@ -371,7 +398,7 @@ Mean apartment square area is a variable which delivers an interesting view on a
 <b>Figure 4. Median year of construction of the apartments in specific districts of Warsaw</b>
 <br>
 <div class = "figure"> 
-![Figure 4](C:/Users/grzeg/Desktop/studia/Data Science/2 rok/semestr 2/Spatial/Housing-Prices-Spatial-econometrics/graphs/Median year of construction of the apartments in specific districts.PNG)\ 
+![Figure 4](graphs/Median year of construction of the apartments in specific districts.PNG)\ 
 </div>
 
 Median year of construction can show how Warsaw evolved in time. The process, without suprise, escalated from the center of city - Śródmieście with apartments older than 50 years (with median threshold) to the borders of Warsaw, but not with the same speed.    
@@ -379,7 +406,7 @@ Median year of construction can show how Warsaw evolved in time. The process, wi
 <b>Figure 5. Life quality measures in specific districts of Warsaw</b>
 <br>
 <div class = "figure"> 
-![Figure 5](C:/Users/grzeg/Desktop/studia/Data Science/2 rok/semestr 2/Spatial/Housing-Prices-Spatial-econometrics/graphs/life quality.PNG)\ 
+![Figure 5](graphs/life quality.PNG)\ 
 </div>
 
 Life quality measures were introduced to capture the determinants of housing-prices widely present in the literature. Here, again we can spot the relation, which was identified for prices of square metres of apartments. Rembertów is the worst district in the case of presented measures and Śródmieście is on the top. Based on this observation, <b><i> Auxiliary Hypothesis Two</i></b> is introduced. <br>
@@ -388,11 +415,19 @@ Life quality measures were introduced to capture the determinants of housing-pri
 <center><i><b> Auxiliary Hypothesis Two </b></i></center>
 <center><i> There is a siginficant relation between prices of apartments and life quality measures in specific districts Warsaw</i> </center><br>  
 
-# Modelling
+# 3. Modelling
+
+Due to the nature of main hypotheses stated in Introduction, and Auxiliary hypotheses from Section 2, the modelling part is done separately for each hypothesis. Different modelling strategies are applied for a purpose of verfication. The problem captured with the <b><i> Hypothesis One </i></b> is addressed with multiple modelling approaches, including OLS, spatial methods, and non-parametric algorithm. For the rest of hypotheses, their, relatively simple functional form, makes the OLS regression enough to conduct a meaningful verification process. In each subsection, after the modelling, the results of it are discussed and hypothesis is definetely verified.       
+
+## 3.1. Hypothesis One
+
+<center><b><i> Hypothesis One </i></b> </center> 
+<center><i> Spatial-based variables are significant predictors of housing prices </i></center <br>
 
 In order to estimate housing prices, we run several models and then compare them with respect to prediction power. There are three types of models which we consider: regular OLS regression, spatial algorithms and non-parametric algorithms. 
 
-**Hypothesis: Spatial-based variables are significant predictors of housing prices**
+
+### 3.1.1. OLS Regression
 
 First model we run is linear regression with the use of only spatial characteristics as independent variables. We consider stepwise regression in order to obtain the best model formula according to AIC criterion.
 
@@ -426,13 +461,34 @@ summary(step.model_1)
 ```
 
 
-## Spatial models
+### 3.1.2. Spatial models
 <!--macierz wag, test I Morana, jakość modeli: AIC, BIC, LogLik-->
 
-## Non-parametric models
+### 3.1.3. Non-parametric models
 
 
+## 3.2. Hypothesis Two
+<center><b><i> Hypothesis Two </i></b> </center>
+<center><i> The coronavirus pandemic had a negative impact on the housing-prices </i></center> <br>
 
+
+## 3.3. Auxiliary Hypothesis One
+<center><b><i> Auxiliary Hypothesis One </i></b> </center>
+<center><i> The prices of the apartments located on the east side of Vistula river are, in general, cheaper </i></center> <br>
+
+## 3.3. Auxiliary Hypothesis Two
+<center><b><i> Auxiliary Hypothesis Two </i></b> </center>
+<center><i> There is a siginficant relation between prices of apartments and life quality measures in specific districts Warsaw </i></center> <br>
+
+
+# Conclusion
+
+# Bibliography
 
 [^gus]: "Ranking dzielnic Warszawy pod względem atrakcyjności warunków życia", GUS Warszawa, source: https://warszawa.stat.gov.pl/publikacje-i-foldery/warunki-zycia/ranking-dzielnic-warszawy-pod-wzgledem-atrakcyjnosci-warunkow-zycia,1,2.html
 
+[^Nominatim]: Nominatim. (2020). https://nominatim.org/release-docs/latest/
+
+[^Project-OSRM]: Project-OSRM. (2020). http://project-osrm.org/docs/v5.5.1/api/#general-options
+
+[^D'Acci]: D'Acci, L. (2018). Quality of urban area, distance from city centre, and housing value. Case study on real estate values in Turin. Cities. Retrieved from: https://www.sciencedirect.com/science/article/abs/pii/S0264275118308552?via%3Dihub
