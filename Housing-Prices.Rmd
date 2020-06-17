@@ -316,18 +316,15 @@ levels(df_final$No_of_rooms_binned)
 This section addresses missing data treatment. Below variables with missing values are presented along with the missings ratio. 
 
 ```{r}
-
 missings <- as.data.frame(colMeans(is.na(df_final))) 
 missings["Variabe"] <- row.names(missings)
 colnames(missings) <- c("Missings_ratio", "Variable")
 missings %>% filter(Missings_ratio > 0.001) %>% select(Variable, Missings_ratio)
-
-
 ```
 
 <p class = "noindent"> For qualitative variables like form of ownership, floor, type of construction, finishing condition, heating, number of floors in the building, building age and floor, we decide to make missing values an explicit factor level. </p>
 
-```{r}
+```{r warning=FALSE, message=FALSE, results='hide'}
 f_names <- c("Ownership", "Floor", "Construction_type", "Finishing_condition", "Heating", "No_of_floors_binned", "Building_age_binned", "Floor_binned")
 
 df_final[,f_names] <- lapply(df_final[,f_names], function(x) fct_explicit_na(x, na_level = "Missing")) %>% as.data.frame
@@ -357,7 +354,6 @@ df_final_2 <- rbind(nonmiss_rent, df_final_1)
 df_final_2$Rent_imp <- ifelse(is.na(df_final_2$Rent), rent_imp, df_final_2$Rent)
 df_final_2 <- df_final_2 %>% dplyr::select(id, Rent_imp)
 df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-id)
-
 ```
 
 # 2. Exploratory Data Analysis
@@ -442,18 +438,17 @@ The adjusted R-squared of the model is 31.44%. The model shows the negative rela
 step.model_0 <- step(ols_0, direction = "both", trace = FALSE)
 summary(step.model_0)
 ```
-The second model we consider uses all possible characteristics including property characteristics, district characteristics and spatial characteristics. 
+
+The second model we consider uses chosen property characteristics without any missing values and also spatial characteristics. 
 
 ```{r}
 ols_1 <- lm(Price_per_sqm ~ 
-            District + Days_from_initial_announcement_binned + Rent_imp + Ownership + Floor_binned + Construction_type +
-            Finishing_condition + No_of_floors_binned + Property_market + Area + No_of_rooms + Building_age_binned  + 
-            Heating + Population_density + Vistula_side + Life_quality + Family_friendliness + Single_people_friendliness +
-            Senior_people_friendliness + Distance_to_PKIN_in_km + Distance_to_subway_in_km + Distance_to_airport_in_km,
-          data=df_final)
+              District + Rent_imp + Property_market + Area + No_of_rooms + Vistula_side + Distance_to_PKIN_in_km +
+              Distance_to_subway_in_km + Distance_to_airport_in_km,
+            data=df_final)
 ```
 
-With the use of stepwise regression we obtain the final model formula which considers all the passed variables. It is clear that District is a significant factor - districts like Białołęka, Rembertów, Wawer or Wesoła indicate lower property prices than those districts closer to the center like Śródmieście, Ochota, Mokotów or considered as family friendly like Ursynów, Wilanów or Bielany. The model 
+With the use of stepwise regression we obtain the final model formula which considers selected variables (variables Vistula_side and Distance_to_subway_in_km were not chosen by the algorithm). It is clear that District is a significant factor - districts like Białołęka, Rembertów, Wawer or Wesoła indicate lower property prices than those districts closer to the center like Śródmieście, Ochota, Mokotów or considered as family friendly like Ursynów, Wilanów or Bielany. The model also indicate that relationship however in this case it should be interpreted with respect to the base factor level being Bemowo district. As to property market, properties from the secondary market tend to exhibit higher prices per squared metre than those from the primary market. Relationship of price for squared metre and the living area of the property is positive but rather small meaning with the increase of the living area also price for squared metre is higher. As to number of rooms, the model indicated that price for squared metre is always lower for apartment with more than one room. The influence of spatial variables is the same as in case of the first model. 
 
 ```{r}
 step.model_1 <- step(ols_1, direction = "both", trace = FALSE)
@@ -462,9 +457,74 @@ summary(step.model_1)
 
 
 ### 3.1.2. Spatial models
-<!--macierz wag, test I Morana, jakość modeli: AIC, BIC, LogLik-->
+
 
 ### 3.1.3. Non-parametric models
+
+The last type of model we run is Extreme Gradient Boosting (XGBoost). XGBoost is an ensemble algorithm based on boosting technique. Firstly, ensemble is a concept in which the idea is to train multiple models using the same learning algorithm. In case of boosting the logic is to build subsequent predictors which learn from the mistakes of the previous predictors. Therefore, the observations in the training dataset have an unequal probability of appearing in subsequent models (in case of XGBoost these are regression trees). Observations which in previous models were classified wrong will have higher probability to appear in the following models than observations classified correctly. Because new models are learning from mistakes committed by previous models, it takes less iterations to reach very good predictions. 
+
+The technical problem with XGBoost is that this algorithm is likely to overfit. Thus several parameters (called hyperparameters) are set to control the fitting process. Below it can be seen the summary of important model hyperparameters needed to specify when building XGBoost. 
+
+```{r echo = TRUE, message=FALSE}
+modelLookup("xgbTree")
+```
+
+In order to build XGBoost model, we pass all variables since the algorithm will decide itself which ones are the most important and based on that they will be chosen more frequently as the splitting features in the decision trees. The model formula includes all original variables existing in the dataset. 
+
+```{r}
+library(caret)
+set.seed(1234)
+df_final <- as.data.frame(df_final)
+which_train_df_final <- createDataPartition(df_final$Price_per_sqm, p = 0.7, list = FALSE) 
+train.df_final <- df_final[which_train_df_final,]
+test.df_final <- df_final[-which_train_df_final,]
+```
+
+```{r}
+formula <- Price_per_sqm ~ District + Total_price + Days_from_initial_announcement + Rent_imp + Ownership + Floor_binned + Construction_type + Finishing_condition + No_of_floors_binned + Property_market + Area + No_of_rooms + Building_age_binned + Heating + Lat + Lon + Distance_to_PKIN_in_km + Distance_to_subway_in_km + Distance_to_airport_in_km + Vistula_side + Life_quality + Family_friendliness + Single_people_friendliness + Senior_people_friendliness
+```
+
+
+```{r}
+xgb_grid_1 <- expand.grid(
+  nrounds = 100,
+  eta = c(0.01, 0.001, 0.0001),
+  max_depth = c(4, 6, 8),
+  gamma = 1
+)
+```
+
+```{r}
+xgb_trcontrol_1 <- trainControl(
+  method = "cv",
+  number = 5,
+  verboseIter = TRUE,
+  returnData = FALSE,
+  returnResamp = "all",        
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,
+  allowParallel = TRUE
+)
+```
+
+```{r}
+install.packages("xgboost")
+```
+
+
+
+```{r}
+library(xgboost)
+xgb_train_1 <- train(
+  x = as.matrix(train.df_final %>%
+                  dplyr::select(-Price_per_sqm)),
+  y = as.factor(train.df_final$Price_per_sqm),
+  trControl = xgb_trcontrol_1,
+  tuneGrid = xgb_grid_1,
+  method = "xgbTree"
+)
+```
+
 
 
 ## 3.2. Hypothesis Two
