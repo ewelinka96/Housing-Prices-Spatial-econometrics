@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
-packages_vector = c("knitr", "readxl", "kableExtra", "ggplot2", "rpart", "rattle", "mice", "dplyr","forcats", "spdep", "rgdal", "maptools", "sp", "RColorBrewer", "e1071", "spatstat", "GISTools", "caret")
+packages_vector = c("knitr", "readxl", "kableExtra", "ggplot2", "rpart", "rattle", "mice", "dplyr","forcats", "spdep", "rgdal", "maptools", "sp", "RColorBrewer", "e1071", "spatstat", "GISTools", "caret", "sjPlot")
 
 package.check <- lapply(packages_vector, FUN = function(x) {
   if (!require(x, character.only = TRUE)) {
@@ -35,6 +35,7 @@ library(e1071)
 library(spatstat)
 library(GISTools)
 library(caret)
+library(sjPlot)
 ```
 
 <style>
@@ -60,6 +61,13 @@ p.noindent {
 text-indent: 0 !important;
 }
 
+table {
+
+margin-left:auto; 
+margin-right:auto;
+
+}
+
 </style>
 
 ```{r setup, include=FALSE}
@@ -71,8 +79,8 @@ options(width = 120)
 ```
 
 # Introduction
-Through the centuries people have invented unlimited variety of techniques and tools to invest money. Real estate market is probably one of the oldest. It guarantees, seemingly, a perfect tradeoff between cash, and something which allows to convert an abstract concept of money into more tangible thing – hectartes of rural plots, houses etc. However, despite the lapse of time and hundreds of years the market exists in different forms, there are no perfect answers what drives the prices of specific types of properties. Sometimes one can get an impression that the attempts to predict the housing prices, which are widely described around different media, are closer to some kind of guessing than any scientific approach. When the coronavirus pandemic in Poland and the lockdown related to it were in peak, one could read the interviews with real-estate experts who were claiming that the prices are not going to go down. For a relatively economic-concious person such statements might be confusing. How can it be that all the markets are most likely to enter a recession and, at the same time, the prices of properties would increase? There is no easy answer to that question. Sometimes, the experts might be wrong on purpose, driven by their own speculative interest. However, what is clear is that there are many determinants of property prices, having their roots in different fields. Starting from the characteristics of properties, going through the situation on financial markets and ending with their influence on investing behavior of people. In this work the first group of features is a subject of analysis. 
 
+Through the centuries people have invented unlimited variety of techniques and tools to invest money. Real estate market is probably one of the oldest. It guarantees, seemingly, a perfect tradeoff between cash, and something which allows to convert an abstract concept of money into more tangible thing – hectartes of rural plots, houses etc. However, despite the lapse of time and hundreds of years the market exists in different forms, there are no perfect answers on what drives the prices of specific types of properties. Sometimes one can get an impression that the attempts to predict the housing prices, which are widely described around different media, are closer to some kind of guessing than any scientific approach. When the coronavirus pandemic in Poland and the lockdown related to it were in peak, one could read the interviews with real-estate experts who were claiming that the prices are not going to go down. For a relatively economic-concious person such statements might be confusing. How can it be that all the markets are most likely to enter a recession and, at the same time, the prices of properties would increase? There is no easy answer to that question. Sometimes, the experts might be wrong on purpose, driven by their own speculative interest. However, what is clear is that there are many determinants of property prices, having their roots in different fields. Starting from the characteristics of properties, going through the situation on financial markets and ending with their influence on investing behavior of people. In this work characteristics of properties are a subject of analysis. 
 
 The main objective of this study is to find determinants of prices of apartments in Warsaw. The relation between characteristics of specific property and its value on the online-market is analyzed. 
 The data obtained from Otodom.pl, which is one of the largest real-estate platforms in Poland, is combined with spatial and discrict characteristics. In this analysis multiple machine-learning methods, starting from OLS regression, through spatial-econometrics specific methods and ending with non-parametric models, are utilized. There are two main hypotheses verified in this work. 
@@ -83,20 +91,17 @@ The data obtained from Otodom.pl, which is one of the largest real-estate platfo
 <br>
 
 <center><i><b> Hypothesis Two </b></i></center>
-<center><i> The coronavirus pandemic had a negative impact on the housing-prices </i> </center>
-
-
+<center><i> The coronavirus pandemic had a negative impact on the housing-prices </i> </center> 
 
 # 1. Data
+
 The dataset used in the analysis is created by the authors based on several sources. There are three general groups of variables: 
 
   * property characteristics 
   * spatial characteristics 
   * district characteristics. 
 
-
 Property characteristics were obtained from otodom.pl website with the use of web scraping algorithm written in Python. All available features of apartments were collected from adverts, amid which address information is the key one from the perspective of this study. 
-
 Spatial data includes distances from collected apartments to a few, arbitrary selected, points on a map of Warsaw. To measure the distances it was neccessary to employ publicly available APIs
 
 * Nominatim – Getting coordinates of a specific location, based on its address [^Nominatim]
@@ -115,6 +120,8 @@ df_final$...1 <- NULL
 # supplementary code
 colnames(df_final) <- c("District", "Total_price", "Days_from_initial_announcement", "Rent", "Ownership", "Floor", "Construction_type", "Finishing_condition", "No_of_floors", "Property_market", "Area", "No_of_rooms", "Year_built", "Heating", "Lat", "Lon", "Distance_to_PKIN_in_km", "Time_to_PKIN_in_minutes", "Price_per_sqm", "Population_density", "Vistula_side", "Life_quality", "Family_friendliness", "Single_people_friendliness", "Senior_people_friendliness", "Distance_to_subway_in_km", "Distance_to_airport_in_km")
 ```
+
+<p class = "noindent"> <b> Table 1. </b> Variables and their description </p>
 
 ```{r echo=FALSE, warning=TRUE}
 variables <- matrix(c(
@@ -148,7 +155,9 @@ variables <- matrix(c(
   ), 
   ncol=2,byrow=TRUE)
 colnames(variables) <- c("Variable Name", "Variable description")
-kable(variables)
+variables %>% 
+  kable() %>% 
+  kable_styling()
 ```
 
 ## 1.1. Data preparation
@@ -196,12 +205,14 @@ In the next stage, categorization of numerical variables takes place. We decide 
 
 <p class = "noindent"> <b> Number of floors </b> </p>
 
+<p class = "noindent"> <b> Figure 1. </b> Number of floors vs Price per sqm </p>
 ```{r warning=FALSE}
 ggplot(df_final, aes(x = No_of_floors, y = Price_per_sqm)) + 
   geom_point(color="#FDE733") +
   theme_minimal()
 ```
 
+<p class = "noindent"> <b> Figure 2.</b> Levels of variable Number of floors suggested by Decision Tree algorithm </p>
 ```{r warning=FALSE, message=FALSE}
 formula <- Price_per_sqm ~ No_of_floors
 tree1 <- rpart(formula, data = df_final, control=rpart.control(minsplit=10, cp=0.002, maxdepth = 3))
@@ -223,6 +234,7 @@ df_final$No_of_floors_binned <- as.factor(df_final$No_of_floors_binned)
 
 <p class = "noindent"> When analyzing variable indicating construction completion year, we noticed three outliers which seemed to be caused by mistyping. We also decided to create and use further in the modelling variable indicating age of the building instead of the year it was built. </p>
 
+
 ```{r}
 df_final$Year_built <- ifelse(df_final$Year_built==19885, 1985, df_final$Year_built)
 df_final$Year_built <- ifelse(df_final$Year_built==20112, 2012, df_final$Year_built)
@@ -231,12 +243,14 @@ df_final$Year_built <- ifelse(df_final$Year_built==20110, 2010, df_final$Year_bu
 df_final$Building_age <- 2020 - df_final$Year_built
 ```
 
+<p class = "noindent"> <b> Figure 3. </b> Age of the apartment vs Price per sqm </p>
 ```{r warning=FALSE}
 ggplot(df_final, aes(x = Building_age, y = Price_per_sqm)) + 
   geom_point(color="#FDE733") +
   theme_minimal()
 ```
 
+<p class = "noindent"> <b> Figure 4.</b> Levels of variable Age of apartment suggested by Decision Tree algorithm </p>
 ```{r}
 formula <- Price_per_sqm ~ Building_age
 tree2 <- rpart(formula, data = df_final, control=rpart.control(minsplit=10, cp=0.002, maxdepth = 3))
@@ -255,18 +269,18 @@ df_final$Building_age_binned <- as.factor(df_final$Building_age_binned)
 ```
 
 <p class = "noindent"> <b> Days from the initial announcement </b> </p>
-
 ```{r, results = 'hide'}
 df_final$Days_from_initial_announcement <- ifelse(df_final$Days_from_initial_announcement=="Less than a day", 0, df_final$Days_from_initial_announcement)
 df_final$Days_from_initial_announcement <- as.integer(df_final$Days_from_initial_announcement)
 ```
 
+<p class = "noindent"> <b> Figure 5. </b>Days from initial announcement vs Price per sqm  </p>
 ```{r warning=FALSE}
 ggplot(df_final, aes(x = Days_from_initial_announcement, y = Price_per_sqm)) + 
   geom_point(color="#FDE733") +
   theme_minimal()
 ```
-
+<p class = "noindent"> <b> Figure 6. </b> Levels of variable Days from initial announcement of apartment suggested by Decision Tree algorithm  </p>
 ```{r, results = 'hide'}
 df_final$Days_from_initial_announcement_binned <- 
   ifelse(df_final$Days_from_initial_announcement == 0, "Less than a day", 
@@ -279,12 +293,12 @@ df_final$Days_from_initial_announcement_binned <- as.factor(df_final$Days_from_i
 ```
 
 <p class = "noindent"> <b> Floor </b> </p>
-
 ```{r, results='hide'}
 df_final$Floor <- as.factor(df_final$Floor)
 levels(df_final$Floor)
 ```
 
+<p class = "noindent"> <b> Figure 7. </b> Count of specific levels of Floor of apartment  </p>
 ```{r warning=FALSE}
 df_final %>% 
   group_by(Floor) %>% 
@@ -301,12 +315,12 @@ levels(df_final$Floor_binned)
 ```
 
 <p class = "noindent"> <b> Number of rooms </b></p>
-
 ```{r, results = 'hide'}
 df_final$No_of_rooms <- as.factor(df_final$No_of_rooms)
 levels(df_final$No_of_rooms)
 ```
 
+<p class = "noindent"> <b> Figure 8. </b> Count of specific levels of Number of rooms in apartment  </p>
 ```{r}
 df_final %>% 
   group_by(No_of_rooms) %>% 
@@ -322,15 +336,20 @@ levels(df_final$No_of_rooms_binned) <- c("1","2","3 or more","3 or more","3 or m
 levels(df_final$No_of_rooms_binned)
 ```
 
-### 1.1.3. Treatment of Missing values 
+### 1.1.3. Treatment of missing values 
 
 This section addresses missing data treatment. Below variables with missing values are presented along with the missings ratio. 
 
+<p class = "noindent"> <b> Table 2. </b> Missing values </p>
 ```{r}
 missings <- as.data.frame(colMeans(is.na(df_final))) 
 missings["Variabe"] <- row.names(missings)
 colnames(missings) <- c("Missings_ratio", "Variable")
-missings %>% dplyr::filter(Missings_ratio > 0.001) %>% dplyr::select(Variable, Missings_ratio)
+missings %>% 
+  dplyr::filter(Missings_ratio > 0.001) %>% 
+  dplyr::select(Variable, Missings_ratio) %>%
+  kable() %>% 
+  kable_styling()
 ```
 
 <p class = "noindent"> For qualitative variables like form of ownership, floor, type of construction, finishing condition, heating, number of floors in the building, building age and floor, we decide to make missing values an explicit factor level. </p>
@@ -371,7 +390,7 @@ df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-id)
 
 After the final data has been obtained. There was a possibility to look at relations between selected variables and the districts of Warsaw. Figure 1 presents mean price per square metre of apartments in specific districts
 
-<b>Figure 1. Mean price per square metre in specific districts of Warsaw</b>
+<b>Figure 9.</b> Mean price per square metre in specific districts of Warsaw
 <br>
 <div class = "figure"> 
 ![Figure 1](graphs/Mean price per square metre in specific districts.PNG)\ 
@@ -379,7 +398,7 @@ After the final data has been obtained. There was a possibility to look at relat
 
 Rembertów, which is an east-border district of Warsaw occured to be the cheapest one place to live in the city in mean values. At the same time, Śródmieście, being the central region, has the highest mean prices, almost 3 times as high as in Rembertów.    
 
-<b>Figure 2. Max price per square metre in specific districts of Warsaw</b>
+<b>Figure 10.</b> Max price per square metre in specific districts of Warsaw
 <br>
 <div class = "figure"> 
 ![Figure 2](graphs/max price per square metre in specific districts.PNG)\ 
@@ -394,7 +413,7 @@ From the analysis of mean and maximum prices a picture of Warsaw apartments mark
 <center><i> The prices of the apartments located on the east side of Vistula river are, in general, cheaper </i></center> <br>
 
 
-<b>Figure 3. Mean apartment square metre area in specific districts of Warsaw</b>
+<b>Figure 11.</b> Mean apartment square metre area in specific districts of Warsaw
 <br>
 <div class = "figure"> 
 ![Figure 3](graphs/mean apartment square metre area in specific districts.PNG)\
@@ -402,7 +421,7 @@ From the analysis of mean and maximum prices a picture of Warsaw apartments mark
 
 Mean apartment square area is a variable which delivers an interesting view on a differentation of square metres of apartments in districts. The south districts seem to have higher means of square metres of apartments. 
 
-<b>Figure 4. Median year of construction of the apartments in specific districts of Warsaw</b>
+<b>Figure 12.</b> Median year of construction of the apartments in specific districts of Warsaw
 <br>
 <div class = "figure"> 
 ![Figure 4](graphs/Median year of construction of the apartments in specific districts.PNG)\ 
@@ -410,7 +429,7 @@ Mean apartment square area is a variable which delivers an interesting view on a
 
 Median year of construction can show how Warsaw evolved in time. The process, without suprise, escalated from the center of city - Śródmieście with apartments older than 50 years (with median threshold) to the borders of Warsaw, but not with the same speed.    
 
-<b>Figure 5. Life quality measures in specific districts of Warsaw</b>
+<b>Figure 13.</b> Life quality measures in specific districts of Warsaw
 <br>
 <div class = "figure"> 
 ![Figure 5](graphs/life quality.PNG)\ 
@@ -429,10 +448,9 @@ Due to the nature of main hypotheses stated in Introduction, and Auxiliary hypot
 ## 3.1. Hypothesis One
 
 <center><b><i> Hypothesis One </i></b> </center> 
-<center><i> Spatial-based variables are significant predictors of housing prices </i></center <br>
+<center><i> Spatial-based variables are significant predictors of housing prices </i></center <br <br>
 
 In order to estimate housing prices, we run several models and then compare them with respect to prediction power. There are three types of models which we consider: regular OLS regression, spatial algorithms and non-parametric algorithms. 
-
 
 ### 3.1.1. OLS Regression
 
@@ -445,9 +463,13 @@ ols_0 <- lm(Price_per_sqm ~ Distance_to_PKIN_in_km + Distance_to_subway_in_km + 
 
 The adjusted R-squared of the model is 31.44%. The model shows the negative relationship of the price per squared metre with distance to PKiN and distance to subway and positive relationship with distance to airport. The results are intuitive - the prices of properties are indeed higher in the centre and near subway station as it increases the property functionality, while prices of properties near airports are lower due to aircraft noise.
 
+<p class = "noindent"> <b> Table 3. </b> Results of OLS regression for <b><i> Hypothesis One </i></b> only with spatial features included </p>
+
 ```{r}
 step.model_0 <- step(ols_0, direction = "both", trace = FALSE)
-summary(step.model_0)
+step.model_0 %>% 
+  tab_model()
+# summary(step.model_0)
 ```
 
 The second model we consider uses chosen property characteristics without any missing values and also spatial characteristics. 
@@ -461,9 +483,11 @@ ols_1 <- lm(Price_per_sqm ~
 
 With the use of stepwise regression we obtain the final model formula which considers selected variables (variables Vistula_side and Distance_to_subway_in_km were not chosen by the algorithm). It is clear that District is a significant factor - districts like Białołęka, Rembertów, Wawer or Wesoła indicate lower property prices than those districts closer to the center like Śródmieście, Ochota, Mokotów or considered as family friendly like Ursynów, Wilanów or Bielany. The model also indicate that relationship however in this case it should be interpreted with respect to the base factor level being Bemowo district. As to property market, properties from the secondary market tend to exhibit higher prices per squared metre than those from the primary market. Relationship of price for squared metre and the living area of the property is positive but rather small meaning with the increase of the living area also price for squared metre is higher. As to number of rooms, the model indicated that price for squared metre is always lower for apartment with more than one room. The influence of spatial variables is the same as in case of the first model. 
 
+<p class = "noindent"> <b> Table 4. </b> Results of OLS regression for <b><i> Hypothesis One </i></b> with all chosen features </p>
 ```{r}
 step.model_1 <- step(ols_1, direction = "both", trace = FALSE)
-summary(step.model_1)
+step.model_1 %>% 
+  tab_model()
 ```
 
 ### 3.1.2. Spatial models
@@ -493,6 +517,7 @@ pop.grid <- readRDS("pop.grid.RDS")
 
 Having read and transformed data on grids, we are now able to limit grid data for whole Poland to only Warsaw. The operation resulted in obtaining 601 grids which can be seen on the plot below compared to the plain districts visualization. 
 
+<p class = "noindent"> <b> Figure 14. </b> Warsaw Shapefile – grid representation </p>
 ```{r}
 lim <- sp::over(pop.grid, districts) # overlay of grid and contour map
 
@@ -507,6 +532,7 @@ plot(pop.grid.warsaw)
 
 As a next step we needed to transform data on property characteristics to spatial object in order to be able to merge it with the grid data. We decided to use only chosen characteristics which could still be potentially sensible predictors after aggregation obtained with the use of mean value. These variables are rent, building age, distance to PKiN, distance to nearest subway station and also distance to airport. Dependent variable is price of the property per squared metre. Plot below presents the average property price per squared metre per grid.
 
+<p class = "noindent"> <b> Figure 15. </b> Average property price per squared metre per grid in Warsaw </p>
 ```{r}
 # property data transformation
 dane.sp <- df_final
@@ -569,17 +595,20 @@ gns <- sacsarlm(formula, data=pop.df.warsaw, listw=cont.listw, type="sacmixed")
 Since Manski model contains a spatial lag of the dependent variable, we should instead of beta coefficients interpret indirect and direct effects. Direct effect indicate the influence of explanatory variable $x$ in location $i$ on the value of dependent variable in location $i$. Indirect effect indicate the influence of explanatory variable $x$ in location $i$ on the value of dependent variable in location $j$. Total effect is a sum of both direct and indirect effect and thus a total effect of explanatory variable indicating the influence of explanatory variable $x$ in location $i$ on the value of dependent variable in locations $i$ and $j$. 
 
 In case of Rent variable the total effect is additive but rather weak. Indirect effect is higher than direct effect which indicates that higher rent in a particular location influences more (positively) the price per squared metre in all other locations. As to building age, it influences positively 4 times more the price per squared metre in the other locations then price per squared metre in the same location. 
-
 Moving to the spatial characteristics there are following conclusions:  
-- the longer the distance to PKIN, the higher price per squared metre in the same location and the lower price per squared metre in all other locations;  
-- the longer the distance to the nearest subway the lower the price in the same location and the higher price in all other locations;  
-- the longer the distance to airport the higher the price in the same location and the lower the price in all other locations.  
-  
+* the longer the distance to PKIN, the higher price per squared metre in the same location and the lower price per squared metre in all other locations;  
+* the longer the distance to the nearest subway the lower the price in the same location and the higher price in all other locations;  
+* the longer the distance to airport the higher the price in the same location and the lower the price in all other locations.  
+
+<p class = "noindent"> <b> Table 4. </b> Results of selected spatial model for <b><i> Hypothesis One </i></b> </p>
+
 ```{r warning=FALSE}
 W.c <- as(as_dgRMatrix_listw(cont.listw), "CsparseMatrix") 
 trMat <- trW(W.c, type="mult") 
 gns_imp <- impacts(gns, tr=trMat, R=2000)
-summary(gns_imp, zstats=FALSE, short=TRUE)
+summary(gns_imp, zstats=FALSE, short=TRUE) 
+  
+  
 ```
 
 ### 3.1.3. Non-parametric models
@@ -588,8 +617,12 @@ The last type of model we run is Extreme Gradient Boosting (XGBoost). XGBoost is
 
 The technical problem with XGBoost is that this algorithm is likely to overfit. Thus several parameters (called hyperparameters) are set to control the fitting process. Below it can be seen the summary of important model hyperparameters needed to specify when building XGBoost. 
 
+<p class = "noindent"> <b> Table 5. </b> Parameters of XGBoost </p>
+
 ```{r echo = TRUE, message=FALSE}
-modelLookup("xgbTree")
+modelLookup("xgbTree") %>% 
+  kable() %>% 
+  kable_styling()
 ```
 
 In order to build XGBoost model, we pass all variables since the algorithm will decide itself which ones are the most important and based on that they will be chosen more frequently as the splitting features in the decision trees. The model formula includes all original variables existing in the dataset. 
@@ -624,37 +657,109 @@ xgb_trcontrol_1 <- trainControl(
 ```
 
 ```{r}
-library(xgboost)
-xgb_train_1 <- train(
-  x = as.matrix(train.df_final %>%
-                  dplyr::select(-Price_per_sqm)),
-  y = as.factor(train.df_final$Price_per_sqm),
-  trControl = xgb_trcontrol_1,
-  tuneGrid = xgb_grid_1,
-  method = "xgbTree"
-)
+# library(xgboost)
+# xgb_train_1 <- train(
+#   x = as.matrix(train.df_final %>%
+#                   dplyr::select(-Price_per_sqm)),
+#   y = as.factor(train.df_final$Price_per_sqm),
+#   trControl = xgb_trcontrol_1,
+#   tuneGrid = xgb_grid_1,
+#   method = "xgbTree"
+# )
 ```
 
 ```{r}
-names <- dimnames(data.matrix(X[,-1]))[[2]]
-importance_matrix <- xgb.importance(names, model = xgb)
-importance_matrix
+# names <- dimnames(data.matrix(X[,-1]))[[2]]
+# importance_matrix <- xgb.importance(names, model = xgb)
+# importance_matrix
 ```
 
 
 ## 3.2. Hypothesis Two
+
 <center><b><i> Hypothesis Two </i></b> </center>
-<center><i> The coronavirus pandemic had a negative impact on the housing-prices </i></center> <br>
+<center><i> The coronavirus pandemic had a negative impact on the housing-prices </i></center> <br> 
+
+To verify this hypothesis a simple approach has been introduced to have prices of apartments as the dependent variable and set binary dependent variable, indicating whether the offer was added before or after COVID pandemic in Poland, approximately, began. 
+
+<p class = "noindent"> <b> Table 6. </b> Results of OLS regression for <b><i> Hypothesis Two </i></b> </p>
+```{r}
+df_hyp2 <- df_final %>% dplyr::select(Total_price, Days_from_initial_announcement)
+
+df_hyp2 <- df_hyp2 %>% mutate(Months_passed = round(Days_from_initial_announcement/30, 1))
+
+df_hyp2 <- df_hyp2 %>% mutate(covid_time = ifelse(Months_passed <= 3, 1,0))
+
+model_hyp2 <- lm(formula = Total_price ~ covid_time, data = df_hyp2)
+
+model_hyp2 %>%
+  tab_model() 
+
+```
+<br>
+
+The reference level of the regression is 0, which means specific price was recorded before COVID pandemic. T-test indicates that the variable Covid time is significant. Its coefficient has a negative sign. This might point out that the prices of apartments after COVID pandemic begun are, indeed, lower than before it. Therefore, we cannot reject the null hypothesis of <b><i> Hypothesis Two </i></b>. However, the simple form of the approach proposed in this subsection does not come without limitations. The table below shows basic grouped statistics for observations labeled as before/after COVID pandemic began. 
+
+<p class = "noindent"> <b> Table 7. </b> Average price and count of observations before and after the start of COVID pandemic </p>
+```{r}
+df_hyp2 %>% 
+  group_by(covid_time) %>% 
+  summarise(Average_price = mean(Total_price), Count = n()) %>% 
+  kable() %>% 
+  kable_styling()
+```
+<br>
+
+It can be easily spotted that average price of the offers posted before the pandemic is visibly higher. In the same time their count is much lower. The difference in average price could be explained with the fact of COVID pandemic. However, the clear difference in counts of both levels of variable might indicate that some of the offers posted after COVID pandemic began are not the first offers. In the other words, it is possible that the prices of some appartments are lower, because they had been first posted in Otodom.pl before the pandemic, but had not been sold. Therefore, sellers lowered prices and posted new offers, after the start of pandemic. To improve the verification of <b><i> Hypothesis Two </i></b>, potential future researcher should control for a following feature:
+
+* Is an offer for specific apartment the first offer posted in Otodom?
+
+<p class = "noindent"> Unfortunately, the data which was obtained for this study do not make it possible to include such a feature. </p>
 
 
-## 3.3. Auxiliary Hypothesis One
+## 3.3. Auxiliary Hypotheses 
+
+For the verification of auxliary hypotheses the same OLS regression approach as in the case of <b><i> Hypothesis Two </i></b> is introduced
+
+### 3.3.1. Auxiliary Hypothesis One
+
 <center><b><i> Auxiliary Hypothesis One </i></b> </center>
 <center><i> The prices of the apartments located on the east side of Vistula river are, in general, cheaper </i></center> <br>
 
+<p class = "noindent"> <b> Table 8. </b> Results of OLS regression for <b><i> Axuliary Hypothesis One </i></b> </p>
+```{r}
+df_hyp3 <- df_final %>% dplyr::select(Total_price, Vistula_side)
+model_hyp3 <- lm(formula = Total_price ~ Vistula_side, data = df_hyp3)
+model_hyp3 %>%
+  tab_model() 
+```
+<br>
+
+The results of the regression show that the side of Vistula river the apartment is located in, has a significant impact on price. Also, the coefficent of the variable indicates that the apartments on the west side of river are more expensive. Therefore, Auxiliary Hypothesis One cannot be rejected.    
+
 ## 3.3. Auxiliary Hypothesis Two
+
 <center><b><i> Auxiliary Hypothesis Two </i></b> </center>
 <center><i> There is a siginficant relation between prices of apartments and life quality measures in specific districts Warsaw </i></center> <br>
 
+<p class = "noindent"> <b> Table 8. </b> Results of OLS regression for <b><i> Auxiliary Hypothesis Two </i></b> </p>
+
+```{r}
+
+df_hyp4 <- df_final %>% 
+              group_by(District) %>% 
+              summarise(Average_price = mean(Total_price), 
+                        Average_life_quality = mean(Life_quality) 
+                        ) %>% dplyr::select(Average_price, Average_life_quality)  
+
+model_hyp4 <- lm(formula = Average_price ~ Average_life_quality, data = df_hyp4)
+
+model_hyp4 %>%
+  tab_model() 
+```
+<br>
+
+In this case the regression was conducted on aggregated data. All the observations were grouped on district level to create a dependent variable – Average price of apartment in specific district, and independent one – Average life quality in specific district. The latter proved to be significant. Then, Auxiliary Hypothesis Two cannot be rejected. 
 
 # Conclusion
 
