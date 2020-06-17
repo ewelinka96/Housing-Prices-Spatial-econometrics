@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
-packages_vector = c("knitr", "readxl", "kableExtra", "ggplot2", "rpart", "rattle", "mice", "dplyr","forcats")
+packages_vector = c("knitr", "readxl", "kableExtra", "ggplot2", "rpart", "rattle", "mice", "dplyr","forcats", "spdep", "rgdal", "maptools", "sp", "RColorBrewer", "e1071", "spatstat", "GISTools", "caret")
 
 package.check <- lapply(packages_vector, FUN = function(x) {
   if (!require(x, character.only = TRUE)) {
@@ -26,6 +26,15 @@ library(rattle)
 library(mice)
 library(dplyr)
 library(forcats)
+library(spdep)
+library(rgdal)
+library(maptools)
+library(sp)
+library(RColorBrewer)
+library(e1071)
+library(spatstat)
+library(GISTools)
+library(caret)
 ```
 
 <style>
@@ -281,7 +290,8 @@ df_final %>%
   group_by(Floor) %>% 
   count %>% 
   ggplot(aes(x = Floor, y = n)) + 
-  geom_bar(stat = "identity", fill = "orange")
+  geom_bar(stat = "identity", fill = "orange") +
+  theme_minimal()
 ```
 
 ```{r, results = 'hide'}
@@ -302,7 +312,8 @@ df_final %>%
   group_by(No_of_rooms) %>% 
   count %>% 
   ggplot(aes(x = No_of_rooms, y = n)) + 
-  geom_bar(stat='identity', fill = "orange")
+  geom_bar(stat='identity', fill = "orange") +
+  theme_minimal()
 ```
 
 ```{r, results = "hide"}
@@ -319,7 +330,7 @@ This section addresses missing data treatment. Below variables with missing valu
 missings <- as.data.frame(colMeans(is.na(df_final))) 
 missings["Variabe"] <- row.names(missings)
 colnames(missings) <- c("Missings_ratio", "Variable")
-missings %>% filter(Missings_ratio > 0.001) %>% select(Variable, Missings_ratio)
+missings %>% dplyr::filter(Missings_ratio > 0.001) %>% dplyr::select(Variable, Missings_ratio)
 ```
 
 <p class = "noindent"> For qualitative variables like form of ownership, floor, type of construction, finishing condition, heating, number of floors in the building, building age and floor, we decide to make missing values an explicit factor level. </p>
@@ -455,9 +466,121 @@ step.model_1 <- step(ols_1, direction = "both", trace = FALSE)
 summary(step.model_1)
 ```
 
-
 ### 3.1.2. Spatial models
 
+Another type of models we consider are spatial models. Due to the fact that the data we analyze are point data, we needed to somehow aggregate it. Instead of analyzing particular districts, we decided to divide Warsaw map into grid with cells of 1 km x 1 km and then aggregate the data within grid cells. 
+
+```{r results='hide'}
+# loading shapefile with Warsaw districts polygons
+districts <- readOGR("./shapefile", "dzielnice_Warszawy") 
+districts <- spTransform(districts, CRS("+proj=longlat +datum=NAD83"))
+
+# reading the grid for Poland and changing projections; limiting variables to only those indicating grids; 
+# it takes a lot of time so we decided to save the key results of the code to RData object and just read the final limited objects
+# pop <- readOGR("./PD_STAT_GRID_CELL_2011.shp", "PD_STAT_GRID_CELL_2011")
+# pop <- spTransform(pop, CRS("+proj=longlat +datum=NAD83"))
+# pop.df <- as.data.frame(pop) %>% dplyr::select(SHAPE_Leng, SHAPE_Area, CODE)
+
+# separating grid
+# pop.grid <- as(pop, "SpatialPolygons")
+
+# saveRDS(pop.df, file = "pop.df.RDS") 
+# saveRDS(pop.grid, file = "pop.grid.RDS") 
+
+pop.df <- readRDS("pop.df.RDS") 
+pop.grid <- readRDS("pop.grid.RDS") 
+```
+
+Having read and transformed data on grids, we are now able to limit grid data for whole Poland to only Warsaw. The operation resulted in obtaining 601 grids which can be seen on the plot below compared to the plain districts visualization. 
+
+```{r}
+lim <- sp::over(pop.grid, districts) # overlay of grid and contour map
+
+pop.df.warsaw <- pop.df[!is.na(lim$nazwa_dzie), ]
+pop.grid.warsaw <- pop.grid[!is.na(lim$nazwa_dzie), ]
+# length(pop.grid.warsaw) 601
+
+par(mfrow=c(1,2))
+plot(districts)
+plot(pop.grid.warsaw)
+```
+
+As a next step we needed to transform data on property characteristics to spatial object in order to be able to merge it with the grid data. We decided to use only chosen characteristics which could still be potentially sensible predictors after aggregation obtained with the use of mean value. These variables are rent, building age, distance to PKiN, distance to nearest subway station and also distance to airport. Dependent variable is price of the property per squared metre. Plot below presents the average property price per squared metre per grid.
+
+```{r}
+# property data transformation
+dane.sp <- df_final
+coordinates(dane.sp) <- c("Lon","Lat") 
+proj4string(dane.sp) <- CRS("+proj=longlat +datum=NAD83")
+pop.grid.warsaw <- spTransform(pop.grid.warsaw, CRS("+proj=longlat +datum=NAD83"))
+dane.sp <- spTransform(dane.sp, CRS("+proj=longlat +datum=NAD83"))
+
+# assigning points to grid
+locs.lim <- over(dane.sp, pop.grid.warsaw)
+df_final$grid <- locs.lim  
+
+# preparing the objects of ordered data 
+aaa1 <- lapply(pop.grid.warsaw@polygons, slot, "ID") # assigning slots to ID
+aaa2 <- unlist(lapply(pop.grid.warsaw@polygons, slot, "ID")) # list of slots numbers
+pop.df.warsaw$ID <- 1:601
+
+# aggregating data by grid
+# dependent variable
+Price_per_sqm.agg <- aggregate(df_final$Price_per_sqm, by=list(df_final$grid), mean, na.rm=TRUE)
+# potential independent variables
+Rent.agg <- aggregate(df_final$Rent_imp, by=list(df_final$grid), mean, na.rm=TRUE)
+Building_age.agg <- aggregate(df_final$Building_age, by=list(df_final$grid), mean, na.rm=TRUE)
+Distance_to_PKIN_in_km.agg <- aggregate(df_final$Distance_to_PKIN_in_km, by=list(df_final$grid), mean, na.rm=TRUE)
+Distance_to_subway_in_km.agg <- aggregate(df_final$Distance_to_subway_in_km, by=list(df_final$grid), mean, na.rm=TRUE)
+Distance_to_airport_in_km.agg <- aggregate(df_final$Distance_to_airport_in_km, by=list(df_final$grid), mean, na.rm=TRUE)
+
+# joining aggregated data with 
+pop.df.warsaw <- dplyr::left_join(pop.df.warsaw, Price_per_sqm.agg, by = c("ID" = "Group.1")) %>% 
+  dplyr::left_join(., Rent.agg, by = c("ID" = "Group.1")) %>% 
+  dplyr::left_join(., Building_age.agg, by = c("ID" = "Group.1")) %>% 
+  dplyr::left_join(., Distance_to_PKIN_in_km.agg, by = c("ID" = "Group.1")) %>% 
+  dplyr::left_join(., Distance_to_subway_in_km.agg, by = c("ID" = "Group.1")) %>% 
+  dplyr::left_join(., Distance_to_airport_in_km.agg, by = c("ID" = "Group.1"))
+  
+colnames(pop.df.warsaw)[5:10] <- c("Price_per_sqm", "Rent", "Building_age", "Distance_to_PKIN_in_km", "Distance_to_subway_in_km", "Distance_to_airport_in_km")
+
+pop.df.warsaw[,5:10][is.na(pop.df.warsaw[,5:10])] <- 0
+
+choropleth(pop.grid.warsaw, pop.df.warsaw$Price_per_sqm)
+```
+
+Having prepared final dataset, we move to the modelling part. We decided to use contiguity spatial weights matrix and run Manski model with full specification meaning with the spatial lag of the dependent variable, spatial lag of the explanatory variables and spatial lag of error. Below can be seen the full model equation. We estimate the model with the use of spdep::sacsarlm() function.
+
+$$Y = \rho WY + \alpha_{l_N} + X\beta + WX\theta + u$$
+$$u = \lambda Wu + \varepsilon $$
+
+```{r warning=FALSE, message=FALSE}
+# contiguity spatial weights matrix for grid
+cont.nb <- poly2nb(pop.grid.warsaw, queen=T)
+cont.listw <- nb2listw(cont.nb, style="W") 
+
+# model formula
+formula <- formula(Price_per_sqm ~ Rent + Building_age + Distance_to_PKIN_in_km + Distance_to_subway_in_km + Distance_to_airport_in_km) 
+
+# Manski model
+gns <- sacsarlm(formula, data=pop.df.warsaw, listw=cont.listw, type="sacmixed")
+```
+
+Since Manski model contains a spatial lag of the dependent variable, we should instead of beta coefficients interpret indirect and direct effects. Direct effect indicate the influence of explanatory variable $x$ in location $i$ on the value of dependent variable in location $i$. Indirect effect indicate the influence of explanatory variable $x$ in location $i$ on the value of dependent variable in location $j$. Total effect is a sum of both direct and indirect effect and thus a total effect of explanatory variable indicating the influence of explanatory variable $x$ in location $i$ on the value of dependent variable in locations $i$ and $j$. 
+
+In case of Rent variable the total effect is additive but rather weak. Indirect effect is higher than direct effect which indicates that higher rent in a particular location influences more (positively) the price per squared metre in all other locations. As to building age, it influences positively 4 times more the price per squared metre in the other locations then price per squared metre in the same location. 
+
+Moving to the spatial characteristics there are following conclusions:  
+- the longer the distance to PKIN, the higher price per squared metre in the same location and the lower price per squared metre in all other locations;  
+- the longer the distance to the nearest subway the lower the price in the same location and the higher price in all other locations;  
+- the longer the distance to airport the higher the price in the same location and the lower the price in all other locations.  
+  
+```{r warning=FALSE}
+W.c <- as(as_dgRMatrix_listw(cont.listw), "CsparseMatrix") 
+trMat <- trW(W.c, type="mult") 
+gns_imp <- impacts(gns, tr=trMat, R=2000)
+summary(gns_imp, zstats=FALSE, short=TRUE)
+```
 
 ### 3.1.3. Non-parametric models
 
@@ -471,19 +594,13 @@ modelLookup("xgbTree")
 
 In order to build XGBoost model, we pass all variables since the algorithm will decide itself which ones are the most important and based on that they will be chosen more frequently as the splitting features in the decision trees. The model formula includes all original variables existing in the dataset. 
 
-```{r}
-library(caret)
+```{r warning=FALSE}
 set.seed(1234)
-df_final <- as.data.frame(df_final)
+df_final <- as.data.frame(df_final) %>% dplyr::select(-grid)
 which_train_df_final <- createDataPartition(df_final$Price_per_sqm, p = 0.7, list = FALSE) 
 train.df_final <- df_final[which_train_df_final,]
 test.df_final <- df_final[-which_train_df_final,]
 ```
-
-```{r}
-formula <- Price_per_sqm ~ District + Total_price + Days_from_initial_announcement + Rent_imp + Ownership + Floor_binned + Construction_type + Finishing_condition + No_of_floors_binned + Property_market + Area + No_of_rooms + Building_age_binned + Heating + Lat + Lon + Distance_to_PKIN_in_km + Distance_to_subway_in_km + Distance_to_airport_in_km + Vistula_side + Life_quality + Family_friendliness + Single_people_friendliness + Senior_people_friendliness
-```
-
 
 ```{r}
 xgb_grid_1 <- expand.grid(
@@ -498,20 +615,13 @@ xgb_grid_1 <- expand.grid(
 xgb_trcontrol_1 <- trainControl(
   method = "cv",
   number = 5,
-  verboseIter = TRUE,
+  search = 'random',
+  verboseIter = FALSE,
   returnData = FALSE,
   returnResamp = "all",        
-  classProbs = TRUE,
-  summaryFunction = twoClassSummary,
   allowParallel = TRUE
 )
 ```
-
-```{r}
-install.packages("xgboost")
-```
-
-
 
 ```{r}
 library(xgboost)
@@ -525,6 +635,11 @@ xgb_train_1 <- train(
 )
 ```
 
+```{r}
+names <- dimnames(data.matrix(X[,-1]))[[2]]
+importance_matrix <- xgb.importance(names, model = xgb)
+importance_matrix
+```
 
 
 ## 3.2. Hypothesis Two
