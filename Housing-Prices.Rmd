@@ -84,7 +84,7 @@ options(width = 120)
 Through the centuries people have invented unlimited variety of techniques and tools to invest money. Real-estate market is probably one of the oldest. It guarantees, seemingly, a perfect trade-off between cash, and something which allows to convert an abstract concept of money into more tangible thing – hectares of rural plots, houses etc. However, despite the lapse of time and hundreds of years the market exists in different forms, there are no perfect answers on what drives the prices of specific types of properties. Sometimes one can get an impression that the attempts to predict the housing prices, which are widely described around different media, are closer to some kind of guessing than any scientific approach. When the coronavirus pandemic in Poland and the lockdown related to it were in peak, one could read the interviews with real-estate experts who were claiming that the prices are not going to go down. For a relatively economic-conscious person such statements might be confusing. How can it be that all the markets are most likely to enter a recession and, at the same time, the prices of properties would increase? There is no easy answer to that question. Sometimes, the experts might be wrong on purpose, driven by their own speculative interest. However, what is clear is that there are many determinants of property prices, having their roots in different fields. Starting from the characteristics of properties, going through the situation on financial markets and ending with their influence on investing behavior of people. In this work characteristics of properties are a subject of analysis. 
 
 The main objective of this study is to find determinants of prices of apartments in Warsaw. The relation between characteristics of specific property and its value on the online-market is analyzed. 
-The data obtained from otodom.pl, which is one of the largest real-estate platforms in Poland, is combined with spatial and district characteristics. In this analysis multiple machine-learning methods, starting from OLS regression, through spatial-econometrics specific methods and ending with non-parametric models, are utilized. There are two main hypotheses verified in this work. 
+The data obtained from otodom.pl, which is one of the largest real-estate platforms in Poland, is combined with spatial and district characteristics. In this analysis multiple machine-learning methods, starting from OLS regression, through spatial-econometrics specific methods and ending with non-parametric model, are utilized. There are two main hypotheses verified in this work. 
 
 <center><i><b> Hypothesis One </b></i></center>
 <center><i> Spatial-based variables are significant predictors of housing-prices </i></center>
@@ -108,9 +108,9 @@ Spatial data includes distances from collected apartments to a few, arbitrary se
 * Nominatim – Getting coordinates of a specific location, based on its address [^Nominatim]
 * Project-OSRM – Based on coordinates, calculating distances [^Project-OSRM]
 
-District characteristics, are captured with the measures able to reflect attractiveness of living conditions in particular Warsaw districts. The need to control for such variables was determined by literature overview, which proves that life-quality matters in the case of housing-prices [^D'Acci]. The life-quality measures were assessed from the report prepared by the Statistical Office in Warsaw [^gus]. 
+District characteristics are captured with the measures able to reflect attractiveness of living conditions in particular Warsaw districts. The need to control for such variables was determined by literature overview, which proves that life-quality matters in the case of housing-prices.[^D'Acci] The life-quality measures were assessed from the report prepared by the Statistical Office in Warsaw.[^gus] 
 
-<p class = "noindent"> Below table presents all the variables analyzed with its detailed descriptions. </p>
+<p class = "noindent"> Table 1 presents all the variables analyzed with its detailed descriptions. </p>
 
 ```{r warning=FALSE, message=FALSE}
 df_final <- readxl::read_excel("df_final_v4.xlsx")
@@ -364,7 +364,7 @@ f_names <- c("Ownership", "Floor", "Construction_type", "Finishing_condition", "
 df_final[,f_names] <- lapply(df_final[,f_names], function(x) fct_explicit_na(x, na_level = "Missing")) %>% as.data.frame
 ``` 
 
-<p class = "noindent"> As to qualitative variables, the decision to fill the value of Rent with Predictive according to Mean Matching algorithm has been made. Value of rent depends on many external factors such as type of the entity managing the building, living area, number of people living in the property, type of heating (e.g. if urban then it is contained in the rent, if gas then it is paid separately to the gas plant). The decision has been made to use as a proxy of these factors the living area, number of rooms and also type of heating. </p>
+<p class = "noindent"> As to qualitative variables, the decision to fill the value of rent with predictions obtained with Mean Matching algorithm has been made. Value of rent depends on many external factors such as type of the entity managing the building, living area, number of people living in the property, type of heating (e.g. if urban then it is contained in the rent, if gas then it is paid separately to the gas plant). The decision has been made to use as a proxy of these factors the living area, number of rooms and also type of heating. </p>
 
 ```{r results='hide', warning=FALSE, message=FALSE}
 formula <- make.formulas(df_final[,c("Rent","Area","No_of_rooms_binned","Heating")])
@@ -392,7 +392,7 @@ df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-id)
 
 # 2. Exploratory Data Analysis
 
-After the final data has been obtained there was a possibility to look at relations between selected variables and the districts of Warsaw. Figure 1 presents mean price per square metre of apartments in specific districts
+After the final data has been obtained there was a possibility to look at relations between selected variables and the districts of Warsaw. Figure 9 presents mean price per square metre of apartments in specific districts
 
 <b>Figure 9.</b> Mean price per square metre in specific districts of Warsaw
 <br>
@@ -475,7 +475,7 @@ step.model_0 %>%
   tab_model()
 ```
 
-To enrich the analysis additionally a model which in addition to spatial characteristics considers also chosen property characteristics has been ran.
+To enrich the analysis additionally a model which in addition to spatial characteristics considers also chosen property characteristics has been run.
 
 ```{r}
 ols_1 <- lm(Price_per_sqm ~ 
@@ -726,7 +726,7 @@ model_hyp3 %>%
 
 The results of the regression show that the side of Vistula river the apartment is located in, has a significant impact on price. Also, the coefficent of the variable indicates that the apartments on the west side of river are more expensive. Therefore, Auxiliary Hypothesis One cannot be rejected.    
 
-## 3.3. Auxiliary Hypothesis Two
+### 3.3.2 Auxiliary Hypothesis Two
 
 <center><b><i> Auxiliary Hypothesis Two </i></b> </center>
 <center><i> There is a siginficant relation between prices of apartments and life quality measures in specific districts Warsaw </i></center> <br>
