@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
-packages_vector = c("knitr", "readxl", "kableExtra", "ggplot2", "rpart", "rattle", "mice", "dplyr","forcats", "spdep", "rgdal", "maptools", "sp", "RColorBrewer", "e1071", "spatstat", "GISTools", "caret", "sjPlot")
+packages_vector = c("knitr", "readxl", "kableExtra", "ggplot2", "rpart", "rattle", "mice", "dplyr","forcats", "spdep", "rgdal", "maptools", "sp", "RColorBrewer", "e1071", "spatstat", "GISTools", "caret", "sjPlot", "xgboost")
 
 package.check <- lapply(packages_vector, FUN = function(x) {
   if (!require(x, character.only = TRUE)) {
@@ -36,6 +36,7 @@ library(spatstat)
 library(GISTools)
 library(caret)
 library(sjPlot)
+library(xgboost)
 ```
 
 <style>
