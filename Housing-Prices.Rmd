@@ -80,10 +80,10 @@ options(width = 120)
 
 # Introduction
 
-Through the centuries people have invented unlimited variety of techniques and tools to invest money. Real-estate market is probably one of the oldest. It guarantees, seemingly, a perfect tradeoff between cash, and something which allows to convert an abstract concept of money into more tangible thing – hectartes of rural plots, houses etc. However, despite the lapse of time and hundreds of years the market exists in different forms, there are no perfect answers on what drives the prices of specific types of properties. Sometimes one can get an impression that the attempts to predict the housing prices, which are widely described around different media, are closer to some kind of guessing than any scientific approach. When the coronavirus pandemic in Poland and the lockdown related to it were in peak, one could read the interviews with real-estate experts who were claiming that the prices are not going to go down. For a relatively economic-concious person such statements might be confusing. How can it be that all the markets are most likely to enter a recession and, at the same time, the prices of properties would increase? There is no easy answer to that question. Sometimes, the experts might be wrong on purpose, driven by their own speculative interest. However, what is clear is that there are many determinants of property prices, having their roots in different fields. Starting from the characteristics of properties, going through the situation on financial markets and ending with their influence on investing behavior of people. In this work characteristics of properties are a subject of analysis. 
+Through the centuries people have invented unlimited variety of techniques and tools to invest money. Real-estate market is probably one of the oldest. It guarantees, seemingly, a perfect trade-off between cash, and something which allows to convert an abstract concept of money into more tangible thing – hectares of rural plots, houses etc. However, despite the lapse of time and hundreds of years the market exists in different forms, there are no perfect answers on what drives the prices of specific types of properties. Sometimes one can get an impression that the attempts to predict the housing prices, which are widely described around different media, are closer to some kind of guessing than any scientific approach. When the coronavirus pandemic in Poland and the lockdown related to it were in peak, one could read the interviews with real-estate experts who were claiming that the prices are not going to go down. For a relatively economic-conscious person such statements might be confusing. How can it be that all the markets are most likely to enter a recession and, at the same time, the prices of properties would increase? There is no easy answer to that question. Sometimes, the experts might be wrong on purpose, driven by their own speculative interest. However, what is clear is that there are many determinants of property prices, having their roots in different fields. Starting from the characteristics of properties, going through the situation on financial markets and ending with their influence on investing behavior of people. In this work characteristics of properties are a subject of analysis. 
 
 The main objective of this study is to find determinants of prices of apartments in Warsaw. The relation between characteristics of specific property and its value on the online-market is analyzed. 
-The data obtained from otodom.pl, which is one of the largest real-estate platforms in Poland, is combined with spatial and discrict characteristics. In this analysis multiple machine-learning methods, starting from OLS regression, through spatial-econometrics specific methods and ending with non-parametric models, are utilized. There are two main hypotheses verified in this work. 
+The data obtained from otodom.pl, which is one of the largest real-estate platforms in Poland, is combined with spatial and district characteristics. In this analysis multiple machine-learning methods, starting from OLS regression, through spatial-econometrics specific methods and ending with non-parametric models, are utilized. There are two main hypotheses verified in this work. 
 
 <center><i><b> Hypothesis One </b></i></center>
 <center><i> Spatial-based variables are significant predictors of housing-prices </i></center>
@@ -107,7 +107,7 @@ Spatial data includes distances from collected apartments to a few, arbitrary se
 * Nominatim – Getting coordinates of a specific location, based on its address [^Nominatim]
 * Project-OSRM – Based on coordinates, calculating distances [^Project-OSRM]
 
-District characteristics, are captured with the measures able to reflect attractiveness of live conditions in particular Warsaw districts. The need to control for such variables was determined by literature overview, which proves that life-quality matters in the case of housing-prices [^D'Acci]. The life-quality measures were assessed from the report prepared by the Statistical Office in Warsaw [^gus]. 
+District characteristics, are captured with the measures able to reflect attractiveness of living conditions in particular Warsaw districts. The need to control for such variables was determined by literature overview, which proves that life-quality matters in the case of housing-prices [^D'Acci]. The life-quality measures were assessed from the report prepared by the Statistical Office in Warsaw [^gus]. 
 
 <p class = "noindent"> Below table presents all the variables analyzed with its detailed descriptions. </p>
 
@@ -142,7 +142,7 @@ variables <- matrix(c(
   "Lat","Latitude of the property",
   "Lon","Longitude of the property",
   "Distance_to_PKIN_in_km","Distance to the center (indicated by the PKiN building) in km",
-  "Time_to_PKIN_in_minutes","Time to the center (indicated by the PKiN building) in minutes", # stopami?
+  "Time_to_PKIN_in_minutes","Time to the center (indicated by the PKiN building) in minutes", 
   "Distance_to_subway_in_km","Distance to the nearest subway in km",
   "Distance_to_airport_in_km", "Distance to Chopin Airport in km",
   "Price_per_sqm","Price per square metre",
@@ -162,7 +162,7 @@ variables %>%
 
 ## 1.1. Data preparation
 
-Raw data preparation and manipulation are presented in this section. There are four main areas that it covers: proper variables formatting, variables categorization and  missing values treatment.
+Raw data preparation and manipulation are presented in this section. There are three main areas that it covers: proper variables formatting, variables categorization and missing values treatment.
 
 ### 1.1.1. Variables formatting 
 
@@ -178,7 +178,7 @@ kable(head(df_final_nums)) %>%
 ```
 <br>
 
-* For variables which are qualitative or binary, we apply factor formatting.
+* For variables which are qualitative or binary, factor formatting is applied.
 ```{r}
 oth <- which(!nums)
 df_final_oth <- df_final[,oth]
@@ -235,7 +235,7 @@ df_final$No_of_floors_binned <- as.factor(df_final$No_of_floors_binned)
  
 <p class = "noindent"> <b> Construction completion year </b> </p>
 
-<p class = "noindent"> When analyzing variable indicating construction completion year, three outliers were noticed which seemed to be caused by mistyping. Additionaly, the decision has been made to create and use in the further modelling a variable indicating age of the building instead of the year it was built. </p>
+<p class = "noindent"> When analyzing variable indicating construction completion year, three outliers were noticed which seemed to be caused by mistyping and corrected. Additionally, decision has been made to create and use in the further modelling a variable indicating age of the building instead of the year it was built. </p>
 
 
 ```{r}
@@ -341,7 +341,7 @@ levels(df_final$No_of_rooms_binned)
 
 ### 1.1.3. Treatment of missing values 
 
-This section addresses missing data treatment. In Table 2 variables with missing values are presented along with the missings ratio. 
+This section addresses missing data treatment. In Table 2 variables with missing values are presented along with the missing values ratio. 
 
 <p class = "noindent"> <b> Table 2. </b> Missing values </p>
 ```{r}
@@ -391,7 +391,7 @@ df_final <- left_join(df_final, df_final_2, by="id") %>% dplyr::select(-id)
 
 # 2. Exploratory Data Analysis
 
-After the final data has been obtained. There was a possibility to look at relations between selected variables and the districts of Warsaw. Figure 1 presents mean price per square metre of apartments in specific districts
+After the final data has been obtained there was a possibility to look at relations between selected variables and the districts of Warsaw. Figure 1 presents mean price per square metre of apartments in specific districts
 
 <b>Figure 9.</b> Mean price per square metre in specific districts of Warsaw
 <br>
@@ -446,14 +446,14 @@ Life quality measures were introduced to capture the determinants of housing-pri
 
 # 3. Modelling
 
-Due to the nature of main hypotheses stated in Introduction, and Auxiliary hypotheses from Section 2, the modelling part is done separately for each hypothesis. Different modelling strategies are applied for a purpose of verfication. The problem captured with the <b><i> Hypothesis One </i></b> is addressed with multiple modelling approaches, including OLS, spatial methods, and non-parametric algorithm. For the rest of hypotheses, their, relatively simple functional form, makes the OLS regression enough to conduct a meaningful verification process. In each subsection, after the modelling, the results of it are discussed and hypothesis is definetely verified.       
+Due to the nature of main hypotheses stated in Introduction, and Auxiliary hypotheses from Section 2, the modelling part is done separately for each hypothesis. Different modelling strategies are applied for a purpose of verification. The problem captured with the <b><i> Hypothesis One </i></b> is addressed with multiple modelling approaches, including OLS, spatial methods, and non-parametric algorithm. For the rest of hypotheses, their, relatively simple functional form, makes the OLS regression enough to conduct a meaningful verification process. In each subsection, after the modelling, the results of it are discussed and hypothesis is definitely verified.       
 
 ## 3.1. Hypothesis One
 
 <center><b><i> Hypothesis One </i></b> </center> 
 <center><i> Spatial-based variables are significant predictors of housing prices </i></center <br <br>
 
-In order to estimate housing prices, several models have been run and then compared with respect to prediction power. There are three types of models which are considered: regular OLS regression, spatial algorithms and non-parametric algorithms. 
+In order to estimate housing prices, several models have been run. There are three types of models which are considered: regular OLS regression, spatial algorithm and non-parametric algorithm. 
 
 ### 3.1.1. OLS Regression
 
@@ -464,7 +464,7 @@ ols_0 <- lm(Price_per_sqm ~ Distance_to_PKIN_in_km + Distance_to_subway_in_km + 
           data=df_final)
 ```
 
-The adjusted R-squared of the model is 31.44%. The model shows the negative relationship of the price per squared metre with distance to PKiN and distance to subway and positive relationship with distance to airport. The results are intuitive - the prices of properties are indeed higher in the centre and near subway station as it increases the property functionality, while prices of properties near airports are lower due to aircraft noise.
+The adjusted R-squared of the model is 31.4%. All variables occurred to be significant according to p-value statistic.  The model shows the negative relationship of the price per squared metre with distance to PKiN and distance to subway and positive relationship with distance to airport. The results are intuitive - the prices of properties are indeed higher in the centre and near subway station as it increases the property functionality, while prices of properties near airports are lower due to aircraft noise.
 
 <p class = "noindent"> <b> Table 3. </b> Results of OLS regression for <b><i> Hypothesis One </i></b> only with spatial features included </p>
 
@@ -472,19 +472,19 @@ The adjusted R-squared of the model is 31.44%. The model shows the negative rela
 step.model_0 <- step(ols_0, direction = "both", trace = FALSE)
 step.model_0 %>% 
   tab_model()
-# summary(step.model_0)
 ```
 
-The second model considered is based on chosen property characteristics and, what is especially importan from the perspective of this work, spatial characteristics. 
+To enrich the analysis additionally a model which in addition to spatial characteristics considers also chosen property characteristics has been ran.
 
 ```{r}
 ols_1 <- lm(Price_per_sqm ~ 
-              District + Rent_imp + Property_market + Area + No_of_rooms + Vistula_side + Distance_to_PKIN_in_km +
-              Distance_to_subway_in_km + Distance_to_airport_in_km,
+              District + Rent_imp + Building_age_binned + Property_market +
+              No_of_rooms + Distance_to_PKIN_in_km + Distance_to_subway_in_km +
+              Distance_to_airport_in_km,
             data=df_final)
 ```
 
-With the use of stepwise regression the final model formula has been obtained. It is clear that District is a significant factor – Białołęka, Rembertów, Wawer or Wesoła have lower property prices than these districts closer to the center – Śródmieście, Ochota, Mokotów or, considered as family friendly – Ursynów, Wilanów or Bielany. The model coefficients confirms that phenonmenon. However, in this case it should be interpreted with respect to the base factor level – Bemowo district. As to property market, properties from the secondary market tend to exhibit higher prices per squared metre than these from the primary market. Relationship of price for squared metre and the living area of the property is positive but rather small meaning with the increase of the living area also price for squared metre is higher. As to number of rooms, the model indicated that price for squared metre is always lower for apartment with more than one room. The influence of spatial variables is the same as in case of the first model. 
+With the use of stepwise regression the final model formula was selected by the algorithm (variable Rent_imp was not chosen by the algorithm). It is clear that District is a significant factor – Białołęka, Rembertów, Wawer or Wesoła have lower property prices than Bemowo district being the base factor level. However in case of those districts closer to the center – Śródmieście, Ochota, Mokotów or, considered as family friendly – Ursynów, Wilanów or Bielany, the price is higher than in Bemowo district. It is intuitive and the model coefficients confirm that phenomenon. As to building age the base level are properties not yet built and thus it can be interpreted based on the model output that buildings built this year or 12 years old tend to have higher prices than those not yet built. Opposite relation can be seen in case of older buildings in case of which the price is lower than those not yet built. As to property market, properties from the secondary market tend to exhibit higher prices per squared metre than these from the primary market. As to number of rooms, the model indicated that for significant levels price for squared metre is always lower for apartment with more than one room. The influence of spatial variables is the same as in case of the first model. 
 
 <p class = "noindent"> <b> Table 4. </b> Results of OLS regression for <b><i> Hypothesis One </i></b> with all chosen features </p>
 ```{r}
@@ -495,7 +495,7 @@ step.model_1 %>%
 
 ### 3.1.2. Spatial models
 
-Another type of models which is considered are spatial models. The data analyzed is point data. Therefore, there was a need to somehow aggregate it. Instead of analyzing particular districts, the decision has been made to divide Warsaw map into grid with cells of 1 km x 1 km and then aggregate the data within grid cells. 
+Another type of model which is considered is spatial model. The data analyzed is point data. Therefore, there was a need to somehow aggregate it. Instead of analyzing particular districts (only 18 observations), the decision has been made to divide Warsaw map into grid with cells of 1 km x 1 km and then aggregate the data within grid cells. 
 
 ```{r results='hide'}
 # loading shapefile with Warsaw districts polygons
@@ -518,7 +518,7 @@ pop.df <- readRDS("pop.df.RDS")
 pop.grid <- readRDS("pop.grid.RDS") 
 ```
 
-After the process of reading and transforming the data on grids, it was able to limit grid data for whole Poland to only Warsaw. The result of the operation were 601 grids which can be seen in the Figure 14 compared to the plain districts visualization. 
+After the process of reading and transforming the data on grids, it was possible to limit grid data for whole Poland to only Warsaw. The result of the operation were 601 grids which can be seen in the Figure 14 compared to the plain districts visualization. 
 
 <p class = "noindent"> <b> Figure 14. </b> Warsaw Shapefile – grid representation </p>
 ```{r}
@@ -571,14 +571,14 @@ pop.df.warsaw <- dplyr::left_join(pop.df.warsaw, Price_per_sqm.agg, by = c("ID" 
   dplyr::left_join(., Distance_to_subway_in_km.agg, by = c("ID" = "Group.1")) %>% 
   dplyr::left_join(., Distance_to_airport_in_km.agg, by = c("ID" = "Group.1"))
   
-colnames(pop.df.warsaw)[5:10] <- c("Price_per_sqm", "Rent", "Building_age", "Distance_to_PKIN_in_km", "Distance_to_subway_in_km", "Distance_to_airport_in_km")
+colnames(pop.df.warsaw)[5:10] <- c("Price_per_sqm", "Rent_imp", "Building_age", "Distance_to_PKIN_in_km", "Distance_to_subway_in_km", "Distance_to_airport_in_km")
 
 pop.df.warsaw[,5:10][is.na(pop.df.warsaw[,5:10])] <- 0
 
 choropleth(pop.grid.warsaw, pop.df.warsaw$Price_per_sqm)
 ```
 
-After creation of final dataset it was possible to move to the modelling part. Contiguity spatial weights matrix and Manski model with full specification (meaning with the spatial lag of the dependent variable, spatial lag of the explanatory variables and spatial lag of error) have been chosen as the proper algorithms. Below full model equation can be seen. The model is estimated with the use of spdep::sacsarlm() function.
+After creation of final dataset it was possible to move to the modelling part. Contiguity spatial weights matrix and Manski model (containing spatial lag of the dependent variable, spatial lag of the explanatory variables and spatial lag of error) have been chosen. Below full model equation can be seen. The model is estimated with the use of spdep::sacsarlm() function.
 
 $$Y = \rho WY + \alpha_{l_N} + X\beta + WX\theta + u$$
 $$u = \lambda Wu + \varepsilon $$
@@ -589,22 +589,20 @@ cont.nb <- poly2nb(pop.grid.warsaw, queen=T)
 cont.listw <- nb2listw(cont.nb, style="W") 
 
 # model formula
-formula <- formula(Price_per_sqm ~ Rent + Building_age + Distance_to_PKIN_in_km + Distance_to_subway_in_km + Distance_to_airport_in_km) 
+formula <- formula(Price_per_sqm ~ Rent_imp + Building_age + Distance_to_PKIN_in_km + Distance_to_subway_in_km + Distance_to_airport_in_km) 
 
 # Manski model
 gns <- sacsarlm(formula, data=pop.df.warsaw, listw=cont.listw, type="sacmixed")
 ```
 
-Since Manski model contains a spatial lag of the dependent variable, instead of beta coefficients indirect and direct effects should be interpreted. 
+Since Manski model contains a spatial lag of the dependent variable, due to simultaneity instead of beta coefficients indirect and direct effects should be interpreted. 
 * Direct effect indicate the influence of explanatory variable $x$ in location $i$ on the value of dependent variable in location $i$. 
 * Indirect effect indicate the influence of explanatory variable $x$ in location $i$ on the value of dependent variable in location $j$. 
 * Total effect is a sum of both direct and indirect effects and thus a total effect of explanatory variable, capturing the influence of explanatory variable $x$ in location $i$ on the value of dependent variable in locations $i$ and $j$. 
 
-In case of Rent variable the total effect is additive but rather weak. Indirect effect is higher than direct effect which indicates that higher rent in a particular location influences more (positively) the price per squared metre in all other locations. As to building age, it influences positively 4 times more the price per squared metre in the other locations then price per squared metre in the same location. 
-Moving to the spatial characteristics there are following conclusions:  
-* the longer the distance to PKIN, the higher price per squared metre in the same location and the lower price per squared metre in all other locations
-* the longer the distance to the nearest subway the lower the price in the same location and the higher price in all other locations  
-* the longer the distance to airport the higher the price in the same location and the lower the price in all other locations.  
+All three combinations of effects can be seen on the output below: (1) when both effects are positive (Rent_imp, Building_age), (2) when both effects are negative (Distance_to_subway_in_km) and (3) when the direct effects are positive and the indirect effects are negative (Distance_to_PKIN_in_km, Distance_to_airport_in_km). 
+
+In case of Rent_imp and Building_age, regardless of location the effect of full support of processes can be seen. The increase of Rent_imp and Building_age in the region i and the increase of Rent_imp and Building_age in the vicinity of j translates into the increase of price per squared metre in the region i. In case of Distance_to_subway_in_km, regardless the location oppositely the effect of full weakening of processes can be seen. The increase of Distance_to_subway_in_km in the region i and an increase in Distance_to_subway_in_km in the vicinity of j translates into a decrease of price per squared metre in the region i. In case of Distance_to_PKIN_in_km and Distance_to_airport_in_km can be seen the leaching relation meaning that resources from one location work in favour of another location, weakening their own location. The increase of both Distance_to_PKIN_in_km and Distance_to_airport_in_km translates into increase of price per squared metre in the region i, while the increase in the location j translates into price per squared metre decrease in the region i.
 
 <p class = "noindent"> <b> Table 4. </b> Results of selected spatial model for <b><i> Hypothesis One </i></b> </p>
 
@@ -613,73 +611,81 @@ W.c <- as(as_dgRMatrix_listw(cont.listw), "CsparseMatrix")
 trMat <- trW(W.c, type="mult") 
 gns_imp <- impacts(gns, tr=trMat, R=2000)
 summary(gns_imp, zstats=FALSE, short=TRUE) 
-  
-  
+```
+
+One can also interpret ratios of effects. For effects in the same direction (Rent_imp, Building_age, Distance_to_subway_in_km), the share of effects will be interpreted. For opposite effects direction (Distance_to_PKIN_in_km, Distance_to_airport_in_km), the relative relationship of both effects will be examined.
+
+For Rent the share of the direct effect is marginal (0.5%) while the share of the indirect effect is 99%. In case of building age, the share of the direct effect is approximately 17%  and the share of indirect effect is 82.6%. In case of Distance_to_subway_in_km shares are inverted - the share of the direct effect is 80% while share of indirect effect is above 19%. When analysing ratios of effects for Distance_to_PKIN_in_km and Distance_to_airport_in_km, it can be seen that in case of Distance_to_PKIN_in_km the ratio is above 1 meaning strong internalization while in case of Distance_to_airport_in_km the ratio is below 1 meaning spillover however weaker than the internalization of Distance_to_PKIN_in_km variable.
+
+
+```{r}
+direct <- gns_imp$res$direct
+indirect <- gns_imp$res$indirect
+total <- gns_imp$res$total
+
+data.frame("Direct_share" = direct / total,
+           "Inirect_share" = indirect / total,
+           "Ratio" = abs(direct) / abs(indirect))
+```
+
+After obtaining and interpreting direct and indirect impacts, the assessment of spatial autocorrelation of residuals using I Moran statistics has been made. According to the results of the moran.test(), we cannot reject the null hypothesis on lack of spatial autocorrelation (random distribution of values) which means that our spatial model has successfully filtered the spatial relationship.
+
+```{r}
+moran.test(gns$residuals, cont.listw)
 ```
 
 ### 3.1.3. Non-parametric models
 
-The last type of model run is Extreme Gradient Boosting (XGBoost). XGBoost is an ensemble algorithm based on boosting technique. Firstly, ensemble is a concept in which the idea is to train multiple models using the same learning algorithm. In case of boosting the logic is to build subsequent predictors which learn from the mistakes of the previous predictors. Therefore, the observations in the training dataset have an unequal probability of appearing in subsequent models (in case of XGBoost these are regression trees). Observations which in previous models were classified wrong will have higher probability to appear in the following models than observations classified correctly. Because new models are learning from mistakes committed by previous models, it takes less iterations to reach very good predictions. 
-
-The technical problem with XGBoost is that this algorithm is likely to overfit. Thus several parameters (called hyperparameters) are set to control the fitting process. Below it can be seen the summary of important model hyperparameters needed to specify when building XGBoost. 
+The last type of model run is Extreme Gradient Boosting (XGBoost). XGBoost is an ensemble algorithm based on boosting technique. The technical problem with XGBoost is that this algorithm is likely to overfit. Thus several parameters (called hyperparameters) are set to control the fitting process. Below it can be seen the summary of important model hyperparameters needed to specify when building XGBoost. 
 
 <p class = "noindent"> <b> Table 5. </b> Parameters of XGBoost </p>
 
 ```{r echo = TRUE, message=FALSE}
-modelLookup("xgbTree") %>% 
-  kable() %>% 
-  kable_styling()
+modelLookup("xgbTree")
 ```
 
-In order to build XGBoost model, we pass all variables since the algorithm will decide itself which ones are the most important and based on that they will be chosen more frequently as the splitting features in the decision trees. The model formula includes all original variables existing in the dataset. 
-
-```{r warning=FALSE}
+```{r warning=FALSE, message=FALSE, results='hide'}
 set.seed(1234)
+
+vars <- c("Price_per_sqm", "Rent_imp", "Building_age", "Distance_to_PKIN_in_km", "Distance_to_subway_in_km", "Distance_to_airport_in_km")
+
 df_final <- as.data.frame(df_final) %>% dplyr::select(-grid)
 which_train_df_final <- createDataPartition(df_final$Price_per_sqm, p = 0.7, list = FALSE) 
 train.df_final <- df_final[which_train_df_final,]
 test.df_final <- df_final[-which_train_df_final,]
-```
 
-```{r}
-xgb_grid_1 <- expand.grid(
-  nrounds = 100,
-  eta = c(0.01, 0.001, 0.0001),
-  max_depth = c(4, 6, 8),
-  gamma = 1
-)
-```
+X_train = xgb.DMatrix(data.matrix(train.df_final %>% dplyr::select(-Price_per_sqm)))
+y_train = train.df_final$Price_per_sqm
+X_test = xgb.DMatrix(data.matrix(test.df_final %>% dplyr::select(-Price_per_sqm)))
+y_test = test.df_final$Price_per_sqm
 
-```{r}
-xgb_trcontrol_1 <- trainControl(
+xgb_trcontrol <- trainControl(
   method = "cv",
-  number = 5,
-  search = 'random',
+  number = 5,  
+  allowParallel = TRUE,
   verboseIter = FALSE,
   returnData = FALSE,
-  returnResamp = "all",        
-  allowParallel = TRUE
+  search = "random"
 )
-```
 
-```{r}
-# library(xgboost)
-# xgb_train_1 <- train(
-#   x = as.matrix(train.df_final %>%
-#                   dplyr::select(-Price_per_sqm)),
-#   y = as.factor(train.df_final$Price_per_sqm),
-#   trControl = xgb_trcontrol_1,
-#   tuneGrid = xgb_grid_1,
-#   method = "xgbTree"
-# )
-```
+xgbGrid <- expand.grid(nrounds = c(100),  
+                       max_depth = c(3, 4, 5, 6),
+                       colsample_bytree = seq(0.6, 1, 0.2),
+                       eta = 0.001,
+                       gamma=seq(0, 1, 0.2),
+                       min_child_weight = seq(200, 800, 200),
+                       subsample = seq(0.6, 1, 0.2)
+                      )
 
-```{r}
-# names <- dimnames(data.matrix(X[,-1]))[[2]]
-# importance_matrix <- xgb.importance(names, model = xgb)
-# importance_matrix
-```
+xgb_model <- train(
+  X_train, y_train,  
+  trControl = xgb_trcontrol,
+  tuneGrid = xgbGrid,
+  method = "xgbTree"
+)
 
+saveRDS(xgb_model, "xgb_model.RData")
+```
 
 ## 3.2. Hypothesis Two
 
@@ -771,19 +777,22 @@ In this case the regression was conducted on aggregated data. All the observatio
 
 The main idea of this work was to study the determinants of apartment prices in Warsaw. Variety of different aspects of this issue have been studied. The hypotheses and the conclusions, coming from their verification, are presented in the list below: 
 
-* TU TWOJE 
+* <b><i> Hypothesis One: </i></b> <i> Spatial-based variables are significant predictors of housing prices </i>
+  - Hypothesis <b> could not be rejected </b>
+  - All three models which were run in order to verify the hypothesis indicated the influence of location of the property on its price.
+
 * <b><i> Hypothesis Two: </i></b> <i> The coronavirus pandemic had a negative impact on the housing-prices </i>
   - Hypothesis <b> could not be rejected </b>
-  - There is a question wheter the differnce in prices between apartments listed before the start of COVID pandemic and after it, is, in real, the effect of the pandemic itself. Future studies are needed in this topic with the possible improvement, suggested in Section 3.2.
+  - There is a question whether the difference in prices between apartments listed before the start of COVID pandemic and after it, is, in real, the effect of the pandemic itself. Future studies are needed in this topic with the possible improvement, suggested in Section 3.2.
   
 * <b><i> Auxiliary Hypothesis One: </i></b> <i> The prices of the apartments located on the east side of Vistula river are, in general, cheaper </i>
   - Hypothesis <b> could not be rejected </b>
-  - There is an important question what are the reasons for such split. It is mostly likely that many factors play a role, from psychological to job-related. Anyway, it is a politically "hot" observation, especially, taking into consideration, that on 17th of June, when this paragraph is written, 11 days are left to Presidential elections. The split between, west and east Poland, called sometimes Poland A and Poland B, is a popular political discourse in the country. With the hypothesis not being rejected, Warsaw can serve as the microrepresentation of mentioned split. 
-  - It would be beneficial to check if such a split exists in other big Polish cities. 
+  - There is an important question what are the reasons for such split. It is mostly likely that many factors play a role, from psychological to job-related. Anyway, it is a politically "hot" observation, especially, taking into consideration, that on 17th of June, when this paragraph is written, 11 days are left to Presidential elections. The split between, west and east Poland, called sometimes Poland A and Poland B, is a popular political discourse in the country. With the hypothesis not being rejected, Warsaw can serve as the micro-representation of mentioned split. 
+  - It would be beneficial to check if such a split exists in other big cities in Poland. 
   
-* <b><i> Auxiliary Hypothesis Two: </i></b> <i> There is a siginficant relation between prices of apartments and life quality measures in specific districts Warsaw </i> 
+* <b><i> Auxiliary Hypothesis Two: </i></b> <i> There is a significant relation between prices of apartments and life quality measures in specific districts Warsaw </i> 
   - Hypothesis <b> could not be rejected </b>
-  - This one is rather self-explanatory. It seems to be obvious that the places with better life-quality are more expensive. However, there is always the question about the relation. It might be the case that people who had money to buy an apartment in more expensive enviroment, are generally feeling better with their lives. But the price of apartment itsel is not the effect of personal well-being. However, to properly address such doubts deeper studies would be needed. 
+  - This one is rather self-explanatory. It seems to be obvious that the places with better life-quality are more expensive. However, there is always the question about the relation. It might be the case that people who had money to buy an apartment in more expensive environment, are generally feeling better with their lives. But the price of apartment itself is not the effect of personal well-being. However, to properly address such doubts deeper studies would be needed. 
   
 # Bibliography
 
